@@ -4,16 +4,16 @@ import { Sidebar } from './Sidebar';
 
 export function AppLayout() {
   return (
-    <div className="flex min-h-screen bg-canvas">
+    <div className="flex min-h-screen w-full bg-[#0a0a0a] p-2">
       <Sidebar />
-      <div className="flex min-w-0 flex-1 flex-col">
+      <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-[#1f1f1f] bg-[#131313] shadow-lg">
         <Header />
-        <main className="flex-1 px-6 py-8">
+        <div className="flex-1 overflow-y-auto px-4 py-6 md:px-6 md:py-8">
           <div className="mx-auto max-w-7xl">
             <Outlet />
           </div>
-        </main>
-      </div>
+        </div>
+      </main>
     </div>
   );
 }

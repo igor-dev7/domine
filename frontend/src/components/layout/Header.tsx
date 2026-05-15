@@ -25,7 +25,7 @@ export function Header() {
     .toUpperCase();
 
   return (
-    <header className="flex h-16 items-center justify-end gap-4 border-b border-hairline bg-canvas px-6">
+    <header className="sticky top-0 z-50 flex h-16 shrink-0 items-center justify-end gap-4 rounded-tl-xl rounded-tr-xl border-b border-[#1f1f1f] bg-[#131313]/80 px-6 backdrop-blur-md">
       <div className="hidden text-right md:block">
         <p className="text-sm font-semibold leading-tight text-ink">{usuario.nome}</p>
         <p className="text-xs leading-tight text-mute">{usuario.email}</p>
