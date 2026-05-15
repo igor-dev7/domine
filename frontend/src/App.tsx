@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
+import { BarChart3, Bell, BookOpen, LifeBuoy, Settings, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { PrivateRoute } from '@/components/PrivateRoute';
 import { AdminRoute } from '@/components/AdminRoute';
@@ -14,6 +15,7 @@ import { MeusEquipamentos } from '@/pages/MeusEquipamentos';
 import { EquipamentoForm } from '@/pages/EquipamentoForm';
 import { UsuariosLista } from '@/pages/UsuariosLista';
 import { UsuarioForm } from '@/pages/UsuarioForm';
+import { EmConstrucao } from '@/pages/EmConstrucao';
 
 export default function App() {
   const { isAuthenticated } = useAuth();
@@ -40,6 +42,66 @@ export default function App() {
               <Route path="/usuarios" element={<UsuariosLista />} />
               <Route path="/usuarios/novo" element={<UsuarioForm />} />
               <Route path="/usuarios/:id/editar" element={<UsuarioForm />} />
+              <Route
+                path="/relatorios"
+                element={
+                  <EmConstrucao
+                    titulo="Relatórios"
+                    descricao="Indicadores agregados de SLA, tempo médio de resolução, volume por período, satisfação. KPIs essenciais pra direção de TI."
+                    icone={BarChart3}
+                  />
+                }
+              />
+              <Route
+                path="/auditoria"
+                element={
+                  <EmConstrucao
+                    titulo="Auditoria"
+                    descricao="Trilha consolidada de eventos do sistema: alterações de status, atribuições, criação/edição de usuários e equipamentos. Conformidade e troubleshooting."
+                    icone={ShieldCheck}
+                  />
+                }
+              />
+              <Route
+                path="/base-conhecimento"
+                element={
+                  <EmConstrucao
+                    titulo="Base de conhecimento"
+                    descricao="Artigos e FAQs internos. Self-service pros usuários e redução de chamados repetidos."
+                    icone={BookOpen}
+                  />
+                }
+              />
+              <Route
+                path="/notificacoes"
+                element={
+                  <EmConstrucao
+                    titulo="Notificações"
+                    descricao="Central de avisos do sistema: violações de SLA, novas atribuições, comentários pendentes."
+                    icone={Bell}
+                  />
+                }
+              />
+              <Route
+                path="/configuracoes"
+                element={
+                  <EmConstrucao
+                    titulo="Configurações"
+                    descricao="Preferências do sistema, integrações, políticas, categorias customizáveis."
+                    icone={Settings}
+                  />
+                }
+              />
+              <Route
+                path="/suporte"
+                element={
+                  <EmConstrucao
+                    titulo="Suporte e ajuda"
+                    descricao="Documentação, atalhos de teclado, contato com o time de plataforma."
+                    icone={LifeBuoy}
+                  />
+                }
+              />
             </Route>
           </Route>
         </Route>
