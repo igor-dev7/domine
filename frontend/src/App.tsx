@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { PrivateRoute } from '@/components/PrivateRoute';
+import { AdminRoute } from '@/components/AdminRoute';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Toaster } from '@/components/ui/sonner';
 import { Login } from '@/pages/Login';
@@ -8,6 +9,11 @@ import { Dashboard } from '@/pages/Dashboard';
 import { ChamadosLista } from '@/pages/ChamadosLista';
 import { ChamadoDetalhe } from '@/pages/ChamadoDetalhe';
 import { ChamadoNovo } from '@/pages/ChamadoNovo';
+import { EquipamentosLista } from '@/pages/EquipamentosLista';
+import { MeusEquipamentos } from '@/pages/MeusEquipamentos';
+import { EquipamentoForm } from '@/pages/EquipamentoForm';
+import { UsuariosLista } from '@/pages/UsuariosLista';
+import { UsuarioForm } from '@/pages/UsuarioForm';
 
 export default function App() {
   const { isAuthenticated } = useAuth();
@@ -25,6 +31,16 @@ export default function App() {
             <Route path="/chamados" element={<ChamadosLista />} />
             <Route path="/chamados/novo" element={<ChamadoNovo />} />
             <Route path="/chamados/:id" element={<ChamadoDetalhe />} />
+            <Route path="/equipamentos/meus" element={<MeusEquipamentos />} />
+
+            <Route element={<AdminRoute />}>
+              <Route path="/equipamentos" element={<EquipamentosLista />} />
+              <Route path="/equipamentos/novo" element={<EquipamentoForm />} />
+              <Route path="/equipamentos/:id/editar" element={<EquipamentoForm />} />
+              <Route path="/usuarios" element={<UsuariosLista />} />
+              <Route path="/usuarios/novo" element={<UsuarioForm />} />
+              <Route path="/usuarios/:id/editar" element={<UsuarioForm />} />
+            </Route>
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
