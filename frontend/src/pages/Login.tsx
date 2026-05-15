@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { AxiosError } from 'axios';
+import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { SignInPage, type Testimonial } from '@/components/ui/sign-in';
@@ -44,7 +45,7 @@ export function Login() {
     },
     onError: (error: AxiosError<ErroResponse>) => {
       const msg = error.response?.data?.mensagens?.[0] ?? 'Erro ao fazer login.';
-      alert(msg);
+      toast.error(msg);
     },
   });
 
@@ -54,7 +55,7 @@ export function Login() {
     const email = ((formData.get('email') as string) ?? '').trim();
     const senha = (formData.get('password') as string) ?? '';
     if (!email || !senha) {
-      alert('Preencha email e senha.');
+      toast.error('Preencha email e senha.');
       return;
     }
     mutation.mutate({ email, senha });
@@ -67,9 +68,9 @@ export function Login() {
       heroVideoSrc={heroVideoSrc}
       testimonials={testimonials}
       onSignIn={handleSignIn}
-      onMicrosoftSignIn={() => alert('SSO Microsoft em breve')}
-      onResetPassword={() => alert('Reset de senha em breve')}
-      onCreateAccount={() => alert('Cadastro fechado para o ExpoTech 2026')}
+      onMicrosoftSignIn={() => toast.info('SSO Microsoft em breve.')}
+      onResetPassword={() => toast.info('Reset de senha em breve.')}
+      onCreateAccount={() => toast.info('Cadastro fechado para o ExpoTech 2026.')}
     />
   );
 }
