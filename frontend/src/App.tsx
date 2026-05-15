@@ -19,7 +19,6 @@ import { EmConstrucao } from '@/pages/EmConstrucao';
 import { Relatorios } from '@/pages/Relatorios';
 import { Auditoria } from '@/pages/Auditoria';
 import { BaseConhecimento } from '@/pages/BaseConhecimento';
-import { Notificacoes } from '@/pages/Notificacoes';
 
 export default function App() {
   const { isAuthenticated } = useAuth();
@@ -49,7 +48,6 @@ export default function App() {
               <Route path="/relatorios" element={<Relatorios />} />
               <Route path="/auditoria" element={<Auditoria />} />
               <Route path="/base-conhecimento" element={<BaseConhecimento />} />
-              <Route path="/notificacoes" element={<Notificacoes />} />
               <Route
                 path="/configuracoes"
                 element={

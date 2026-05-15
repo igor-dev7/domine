@@ -9,6 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { NotificacoesDropdown } from '@/components/layout/NotificacoesDropdown';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 
@@ -40,6 +41,7 @@ export function Header() {
       >
         {usuario.perfil}
       </span>
+      <NotificacoesDropdown />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
@@ -62,11 +64,14 @@ export function Header() {
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem disabled>
-            <UserIcon className="mr-2 h-4 w-4" />
+            <UserIcon />
             Minha conta
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={logout} className="text-destructive focus:text-destructive">
-            <LogOut className="mr-2 h-4 w-4" />
+          <DropdownMenuItem
+            onClick={logout}
+            className="text-destructive focus:bg-destructive/15 focus:text-destructive"
+          >
+            <LogOut />
             Sair
           </DropdownMenuItem>
         </DropdownMenuContent>

@@ -2,19 +2,22 @@ import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   BarChart3,
-  Bell,
   BookOpen,
+  KeyRound,
   LayoutDashboard,
   LifeBuoy,
+  LogOut,
   Monitor,
   Moon,
   PanelLeftClose,
   PanelLeftOpen,
+  Pencil,
   Plus,
   Settings,
   ShieldCheck,
   Sun,
   Ticket,
+  User as UserIcon,
   Users,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -25,11 +28,42 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuPortal,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { iniciaisDe } from '@/lib/format';
+
+function HoverHint({
+  active,
+  label,
+  children,
+}: {
+  active: boolean;
+  label: string;
+  children: React.ReactNode;
+}) {
+  if (!active) return <>{children}</>;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="block w-full">{children}</span>
+      </TooltipTrigger>
+      <TooltipContent
+        side="right"
+        sideOffset={12}
+        className="border border-hairline bg-[#1f1f1f] text-ink shadow-lg"
+      >
+        {label}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
 
 interface ItemSidebar {
   to: string;
@@ -41,6 +75,8 @@ interface GrupoSidebar {
   label: string;
   items: ItemSidebar[];
 }
+
+const STAGGER_MS = 60;
 
 const itensComum: ItemSidebar[] = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -70,7 +106,6 @@ const gruposAdmin: GrupoSidebar[] = [
     label: 'Conhecimento',
     items: [
       { to: '/base-conhecimento', label: 'Base de conhecimento', icon: BookOpen },
-      { to: '/notificacoes', label: 'Notificações', icon: Bell },
     ],
   },
 ];
@@ -80,101 +115,144 @@ export function Sidebar() {
   const [colapsada, setColapsada] = useState(false);
   const isAdmin = usuario?.perfil === 'ADMIN';
 
+  // Contador incremental de delay durante o render (stagger das animações de entrada).
+  let i = 0;
+  const next = () => ++i * STAGGER_MS;
+
   return (
     <aside
       className={cn(
         'sticky top-2 hidden h-[calc(100vh-1rem)] shrink-0 flex-col overflow-hidden md:flex',
-        'transition-[width] duration-300 ease-out',
+        'transition-[width] duration-500 ease-in-out',
         colapsada ? 'w-14' : 'w-60',
       )}
     >
       {/* Header: logo + toggle */}
       <div
         className={cn(
-          'flex h-14 shrink-0 items-center px-2',
+          'flex h-14 shrink-0 items-center px-2 transition-all duration-500 ease-in-out',
           colapsada ? 'justify-start' : 'justify-between gap-2',
         )}
       >
-        {!colapsada && (
-          <div className="flex items-center">
-            <Logo size={20} />
-          </div>
-        )}
-        <button
-          onClick={() => setColapsada((v) => !v)}
+        <div
           className={cn(
-            'flex items-center rounded-md text-mute transition-colors hover:bg-[#1a1a1a] hover:text-ink',
-            colapsada ? 'h-9 w-full justify-start pl-1' : 'shrink-0 justify-center p-1.5',
+            'animate-element flex items-center overflow-hidden transition-all duration-300 ease-in-out',
+            colapsada ? 'pointer-events-none w-0 opacity-0' : 'w-auto opacity-100',
           )}
-          aria-label={colapsada ? 'Expandir sidebar' : 'Colapsar sidebar'}
+          style={{ animationDelay: `${next()}ms` }}
         >
-          {colapsada ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={20} />}
-        </button>
+          <Logo size={20} />
+        </div>
+        <HoverHint active={colapsada} label="Expandir sidebar">
+          <button
+            onClick={() => setColapsada((v) => !v)}
+            className={cn(
+              'animate-element flex items-center rounded-md text-mute transition-all duration-500 ease-in-out hover:bg-[#1a1a1a] hover:text-ink',
+              colapsada ? 'h-9 w-full justify-start pl-1' : 'shrink-0 justify-center p-1.5',
+            )}
+            style={{ animationDelay: `${next()}ms` }}
+            aria-label={colapsada ? 'Expandir sidebar' : 'Colapsar sidebar'}
+          >
+            {colapsada ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={20} />}
+          </button>
+        </HoverHint>
       </div>
 
       {/* Navegação */}
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto overflow-x-hidden px-2 pt-2">
         {isAdmin
           ? gruposAdmin.map((grupo) => (
-              <GrupoNav key={grupo.label} grupo={grupo} colapsada={colapsada} />
+              <GrupoNav
+                key={grupo.label}
+                grupo={grupo}
+                colapsada={colapsada}
+                labelDelay={next()}
+                itemDelay={() => next()}
+              />
             ))
           : itensComum.map((item) => (
-              <ItemNav key={item.to} item={item} colapsada={colapsada} />
+              <ItemNav key={item.to} item={item} colapsada={colapsada} delay={next()} />
             ))}
       </nav>
 
       {/* Footer: ações + perfil */}
-      <FooterSidebar colapsada={colapsada} usuario={usuario} onLogout={logout} />
+      <FooterSidebar
+        colapsada={colapsada}
+        usuario={usuario}
+        onLogout={logout}
+        nextDelay={next}
+      />
     </aside>
   );
 }
 
-function GrupoNav({ grupo, colapsada }: { grupo: GrupoSidebar; colapsada: boolean }) {
+function GrupoNav({
+  grupo,
+  colapsada,
+  labelDelay,
+  itemDelay,
+}: {
+  grupo: GrupoSidebar;
+  colapsada: boolean;
+  labelDelay: number;
+  itemDelay: () => number;
+}) {
   return (
     <div className="mb-2">
       <p
         className={cn(
-          'px-3 pb-1 pt-3 text-xs font-medium uppercase tracking-wider text-mute/70 transition-opacity duration-200',
+          'animate-element px-3 pb-1 pt-3 text-xs font-medium uppercase tracking-wider text-mute/70 transition-opacity duration-200',
           colapsada && 'pointer-events-none h-0 overflow-hidden pb-0 pt-0 opacity-0',
         )}
+        style={{ animationDelay: `${labelDelay}ms` }}
       >
         {grupo.label}
       </p>
       {grupo.items.map((item) => (
-        <ItemNav key={item.to} item={item} colapsada={colapsada} />
+        <ItemNav key={item.to} item={item} colapsada={colapsada} delay={itemDelay()} />
       ))}
     </div>
   );
 }
 
-function ItemNav({ item, colapsada }: { item: ItemSidebar; colapsada: boolean }) {
+function ItemNav({
+  item,
+  colapsada,
+  delay,
+}: {
+  item: ItemSidebar;
+  colapsada: boolean;
+  delay: number;
+}) {
   return (
-    <NavLink
-      to={item.to}
-      end={item.to === '/dashboard'}
-      title={colapsada ? item.label : undefined}
-      className={({ isActive }) =>
-        cn(
-          'group flex items-center gap-3 rounded-md py-2 text-sm font-medium transition-colors duration-200',
-          colapsada ? 'justify-center px-2' : 'px-3',
-          isActive
-            ? colapsada
-              ? 'text-primary'
-              : 'bg-[#1a1a1a] text-ink'
-            : 'text-body hover:bg-[#161616] hover:text-ink',
-        )
-      }
-    >
-      <item.icon size={16} className="shrink-0" />
-      <span
-        className={cn(
-          'truncate whitespace-nowrap transition-all duration-200',
-          colapsada ? 'w-0 opacity-0' : 'flex-1 opacity-100',
-        )}
+    <HoverHint active={colapsada} label={item.label}>
+      <NavLink
+        to={item.to}
+        end={item.to === '/dashboard'}
+        style={{ animationDelay: `${delay}ms` }}
+        className={({ isActive }) =>
+          cn(
+            'animate-element group flex w-full items-center gap-3 rounded-md py-2 text-sm font-medium transition-all duration-500 ease-in-out',
+            colapsada ? 'justify-center px-2' : 'px-3',
+            isActive
+              ? colapsada
+                ? 'text-primary'
+                : "relative bg-gradient-to-r from-primary/20 via-transparent to-transparent text-ink before:absolute before:inset-y-1.5 before:left-0 before:w-0.5 before:rounded-full before:bg-primary before:content-['']"
+              : 'text-body hover:bg-[#161616] hover:text-ink',
+          )
+        }
       >
-        {item.label}
-      </span>
-    </NavLink>
+        <item.icon size={16} className="shrink-0" />
+        <span
+          className={cn(
+            'truncate whitespace-nowrap transition-all duration-500 ease-in-out',
+            colapsada ? 'w-0 opacity-0' : 'flex-1 opacity-100',
+          )}
+        >
+          {item.label}
+        </span>
+      </NavLink>
+    </HoverHint>
   );
 }
 
@@ -182,13 +260,20 @@ function FooterSidebar({
   colapsada,
   usuario,
   onLogout,
+  nextDelay,
 }: {
   colapsada: boolean;
   usuario: { nome: string; email: string; perfil: string } | null;
   onLogout: () => void;
+  nextDelay: () => number;
 }) {
   if (!usuario) return null;
   const iniciais = iniciaisDe(usuario.nome);
+
+  const dConfig = nextDelay();
+  const dSuporte = nextDelay();
+  const dAparencia = nextDelay();
+  const dPerfil = nextDelay();
 
   return (
     <div className="mt-auto shrink-0 space-y-1 px-2 pb-2 pt-3">
@@ -197,45 +282,83 @@ function FooterSidebar({
         label="Configurações"
         to="/configuracoes"
         colapsada={colapsada}
+        delay={dConfig}
       />
-      <AcaoFooter icon={LifeBuoy} label="Suporte / Ajuda" to="/suporte" colapsada={colapsada} />
-      <AparenciaAcao colapsada={colapsada} />
+      <AcaoFooter
+        icon={LifeBuoy}
+        label="Suporte / Ajuda"
+        to="/suporte"
+        colapsada={colapsada}
+        delay={dSuporte}
+      />
+      <AparenciaAcao colapsada={colapsada} delay={dAparencia} />
 
       <div className="my-2 h-px bg-[#1f1f1f]" />
 
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button
-            className={cn(
-              'flex w-full items-center rounded-md text-left transition-colors hover:bg-[#161616]',
-              colapsada ? 'h-10 justify-center px-1' : 'gap-3 px-2 py-2',
-            )}
-            aria-label="Menu do usuário"
-          >
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/15 text-xs font-semibold text-primary">
-              {iniciais}
-            </span>
-            <span
+        <HoverHint active={colapsada} label={usuario.nome}>
+          <DropdownMenuTrigger asChild>
+            <button
+              style={{ animationDelay: `${dPerfil}ms` }}
               className={cn(
-                'min-w-0 flex-1 overflow-hidden transition-opacity duration-200',
-                colapsada ? 'w-0 opacity-0' : 'opacity-100',
+                'animate-element flex w-full items-center rounded-md text-left transition-all duration-500 ease-in-out hover:bg-[#161616]',
+                colapsada ? 'h-10 justify-center px-1' : 'gap-3 px-2 py-2',
               )}
+              aria-label="Menu do usuário"
             >
-              <p className="truncate text-sm font-semibold leading-tight text-ink">
-                {usuario.nome}
-              </p>
-              <p className="truncate text-xs leading-tight text-mute">{usuario.email}</p>
-            </span>
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent side="top" align="end" className="w-56">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/15 text-xs font-semibold text-primary">
+                {iniciais}
+              </span>
+              <span
+                className={cn(
+                  'min-w-0 flex-1 overflow-hidden transition-all duration-500 ease-in-out',
+                  colapsada ? 'w-0 opacity-0' : 'opacity-100',
+                )}
+              >
+                <p className="truncate text-sm font-semibold leading-tight text-ink">
+                  {usuario.nome}
+                </p>
+                <p className="truncate text-xs leading-tight text-mute">{usuario.email}</p>
+              </span>
+            </button>
+          </DropdownMenuTrigger>
+        </HoverHint>
+        <DropdownMenuContent side="right" align="end" sideOffset={12} className="w-60">
           <DropdownMenuLabel className="flex flex-col gap-0.5">
             <span className="text-sm font-semibold text-ink">{usuario.nome}</span>
             <span className="text-xs font-normal text-mute">{usuario.email}</span>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem disabled>Minha conta</DropdownMenuItem>
-          <DropdownMenuItem onClick={onLogout} className="text-destructive focus:text-destructive">
+
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <UserIcon />
+              Minha conta
+            </DropdownMenuSubTrigger>
+            <DropdownMenuPortal>
+              <DropdownMenuSubContent>
+                <DropdownMenuItem>
+                  <UserIcon />
+                  Ver perfil
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <Pencil />
+                  Editar dados
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <KeyRound />
+                  Trocar senha
+                </DropdownMenuItem>
+              </DropdownMenuSubContent>
+            </DropdownMenuPortal>
+          </DropdownMenuSub>
+
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onClick={onLogout}
+            className="text-destructive focus:bg-destructive/15 focus:text-destructive"
+          >
+            <LogOut />
             Sair
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -249,42 +372,46 @@ function AcaoFooter({
   label,
   to,
   colapsada,
+  delay,
 }: {
   icon: typeof Settings;
   label: string;
   to: string;
   colapsada: boolean;
+  delay: number;
 }) {
   return (
-    <NavLink
-      to={to}
-      title={colapsada ? label : undefined}
-      className={({ isActive }) =>
-        cn(
-          'flex items-center gap-3 rounded-md py-2 text-sm font-medium transition-colors',
-          colapsada ? 'justify-center px-2' : 'px-3',
-          isActive
-            ? colapsada
-              ? 'text-primary'
-              : 'bg-[#1a1a1a] text-ink'
-            : 'text-body hover:bg-[#161616] hover:text-ink',
-        )
-      }
-    >
-      <Icon size={16} className="shrink-0" />
-      <span
-        className={cn(
-          'truncate whitespace-nowrap transition-all duration-200',
-          colapsada ? 'w-0 opacity-0' : 'flex-1 opacity-100',
-        )}
+    <HoverHint active={colapsada} label={label}>
+      <NavLink
+        to={to}
+        style={{ animationDelay: `${delay}ms` }}
+        className={({ isActive }) =>
+          cn(
+            'animate-element flex w-full items-center gap-3 rounded-md py-2 text-sm font-medium transition-all duration-500 ease-in-out',
+            colapsada ? 'justify-center px-2' : 'px-3',
+            isActive
+              ? colapsada
+                ? 'text-primary'
+                : "relative bg-gradient-to-r from-primary/20 via-transparent to-transparent text-ink before:absolute before:inset-y-1.5 before:left-0 before:w-0.5 before:rounded-full before:bg-primary before:content-['']"
+              : 'text-body hover:bg-[#161616] hover:text-ink',
+          )
+        }
       >
-        {label}
-      </span>
-    </NavLink>
+        <Icon size={16} className="shrink-0" />
+        <span
+          className={cn(
+            'truncate whitespace-nowrap transition-all duration-500 ease-in-out',
+            colapsada ? 'w-0 opacity-0' : 'flex-1 opacity-100',
+          )}
+        >
+          {label}
+        </span>
+      </NavLink>
+    </HoverHint>
   );
 }
 
-function AparenciaAcao({ colapsada }: { colapsada: boolean }) {
+function AparenciaAcao({ colapsada, delay }: { colapsada: boolean; delay: number }) {
   function aoEscolher(tema: 'Claro' | 'Escuro' | 'Sistema') {
     if (tema === 'Escuro') {
       toast.info('Você já está no tema escuro.');
@@ -295,40 +422,42 @@ function AparenciaAcao({ colapsada }: { colapsada: boolean }) {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          title={colapsada ? 'Aparência' : undefined}
-          className={cn(
-            'flex w-full items-center gap-3 rounded-md py-2 text-sm font-medium text-body transition-colors hover:bg-[#161616] hover:text-ink',
-            colapsada ? 'justify-center px-2' : 'px-3',
-          )}
-        >
-          <Moon size={16} className="shrink-0" />
-          <span
+      <HoverHint active={colapsada} label="Aparência">
+        <DropdownMenuTrigger asChild>
+          <button
+            style={{ animationDelay: `${delay}ms` }}
             className={cn(
-              'truncate whitespace-nowrap transition-all duration-200',
-              colapsada ? 'w-0 opacity-0' : 'flex-1 text-left opacity-100',
+              'animate-element flex w-full items-center gap-3 rounded-md py-2 text-sm font-medium text-body transition-all duration-500 ease-in-out hover:bg-[#161616] hover:text-ink',
+              colapsada ? 'justify-center px-2' : 'px-3',
             )}
           >
-            Aparência
-          </span>
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent side="top" align="end" className="w-44">
+            <Moon size={16} className="shrink-0" />
+            <span
+              className={cn(
+                'truncate whitespace-nowrap transition-all duration-500 ease-in-out',
+                colapsada ? 'w-0 opacity-0' : 'flex-1 text-left opacity-100',
+              )}
+            >
+              Aparência
+            </span>
+          </button>
+        </DropdownMenuTrigger>
+      </HoverHint>
+      <DropdownMenuContent side="right" align="end" sideOffset={12} className="w-48">
         <DropdownMenuLabel className="text-xs font-medium uppercase tracking-wider text-mute">
           Tema
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => aoEscolher('Claro')}>
-          <Sun className="mr-2 h-4 w-4" />
+          <Sun />
           Claro
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => aoEscolher('Escuro')}>
-          <Moon className="mr-2 h-4 w-4" />
+          <Moon />
           Escuro
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => aoEscolher('Sistema')}>
-          <Monitor className="mr-2 h-4 w-4" />
+          <Monitor />
           Sistema
         </DropdownMenuItem>
       </DropdownMenuContent>
