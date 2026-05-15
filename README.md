@@ -22,9 +22,33 @@
 
 ## Como rodar
 
+### Modo desenvolvimento (recomendado no dia a dia)
+
 ```bash
 git clone <url-do-repo>
 cd domine
+docker compose up
+```
+
+O Docker Compose carrega automaticamente o `docker-compose.override.yml`, que ativa **hot reload** no backend (Spring DevTools) e no frontend (Vite HMR). Após `git pull`, as alterações refletem nos containers em segundos, sem precisar de rebuild manual.
+
+### Modo produção (apresentação / demo)
+
+```bash
+docker compose -f docker-compose.yml up --build
+```
+
+Ignora o override e roda os containers com o código congelado dentro das imagens, como um deploy real. Backend roda o `.jar` empacotado, frontend roda Vite dev server (substituir por nginx + build é trabalho futuro).
+
+### Quando ainda é necessário rebuild mesmo em dev
+
+- Adicionou dependência nova (`pom.xml` ou `package.json`).
+- Alterou um `Dockerfile`.
+- Alterou variáveis de ambiente no `docker-compose.yml`.
+
+Nesses casos:
+
+```bash
 docker compose up --build
 ```
 

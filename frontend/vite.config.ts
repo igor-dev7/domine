@@ -10,7 +10,12 @@ export default defineConfig({
     },
   },
   server: {
-    host: '0.0.0.0',
+    host: true,
     port: 5173,
+    watch: {
+      // Polling é necessário em containers Linux: inotify do host não chega ao container.
+      usePolling: true,
+      interval: 1000,
+    },
   },
 });

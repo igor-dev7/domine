@@ -1,0 +1,43 @@
+# docker-compose.override.yml
+# Carregado AUTOMATICAMENTE pelo Docker Compose quando presente.
+# Sobrepõe o docker-compose.yml com configurações de DESENVOLVIMENTO:
+# - bind mounts do código fonte (sem rebuild a cada git pull)
+# - stage `dev` dos Dockerfiles (mvn spring-boot:run no back, Vite dev server no front)
+# - polling do watch (inotify do host não chega ao container Linux)
+#
+# Para rodar em modo produção (ignorando este override), use:
+#   docker compose -f docker-compose.yml up --build
+
+services:
+  backend:
+    build:
+      target: dev
+    volumes:
+      - ./backend/src:/app/src
+      - ./backend/pom.xml:/app/pom.xml
+      - maven_cache:/root/.m2
+    environment:
+      SPRING_DEVTOOLS_RESTART_ENABLED: "true"
+    ports:
+      - "35729:35729" # LiveReload (opcional, para integração com IDEs)
+
+  frontend:
+    build:
+      target: dev
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - ./frontend/index.html:/app/index.html
+      - ./frontend/vite.config.ts:/app/vite.config.ts
+      - ./frontend/tsconfig.json:/app/tsconfig.json
+      - ./frontend/tailwind.config.js:/app/tailwind.config.js
+      - ./frontend/postcss.config.js:/app/postcss.config.js
+      - ./frontend/components.json:/app/components.json
+      # node_modules anônimo: preserva o instalado no container, ignora o do host
+      - /app/node_modules
+    environment:
+      CHOKIDAR_USEPOLLING: "true"
+      WATCHPACK_POLLING: "true"
+
+volumes:
+  maven_cache:
