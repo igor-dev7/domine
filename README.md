@@ -52,7 +52,7 @@ Nesses casos:
 docker compose up --build
 ```
 
-Após subir os 3 containers:
+Após subir os containers:
 
 | Serviço | URL |
 |---|---|
@@ -60,6 +60,7 @@ Após subir os 3 containers:
 | Backend (API) | http://localhost:8080/api/v1 |
 | Swagger UI | http://localhost:8080/swagger-ui.html |
 | Postgres | `localhost:5432` (db: `domine`, user: `domine`, pass: `domine123`) |
+| **pgweb** (cliente web do banco, estilo Supabase Studio) | http://localhost:8081 |
 
 ## Credenciais de teste
 

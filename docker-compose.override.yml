@@ -39,5 +39,19 @@ services:
       CHOKIDAR_USEPOLLING: "true"
       WATCHPACK_POLLING: "true"
 
+  # Cliente web para visualizar o banco Postgres (estilo Supabase Studio).
+  # Acesse em http://localhost:8081 — já conectado ao banco do Domine.
+  pgweb:
+    image: sosedoff/pgweb:latest
+    container_name: domine-pgweb
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      DATABASE_URL: postgres://domine:domine123@db:5432/domine?sslmode=disable
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   maven_cache:
