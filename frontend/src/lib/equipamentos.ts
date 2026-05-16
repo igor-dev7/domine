@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from './api';
 import { chamadosKeys } from './chamados';
 import type {
+  ChamadoResponse,
   EquipamentoResponse,
   SpringPage,
   StatusEquipamento,
@@ -123,6 +124,86 @@ export function useAtualizarEquipamento(id: number) {
       invalidarLeituras(qc);
       qc.invalidateQueries({ queryKey: equipamentosKeys.detail(id) });
     },
+  });
+}
+
+// Mutations PATCH leves — pra usar inline na tabela.
+export function useAtualizarStatusEquipamento() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, status }: { id: number; status: StatusEquipamento }) => {
+      const { data } = await api.patch<EquipamentoResponse>(`/equipamentos/${id}/status`, {
+        status,
+      });
+      return data;
+    },
+    onSuccess: (_d, vars) => {
+      invalidarLeituras(qc);
+      qc.invalidateQueries({ queryKey: equipamentosKeys.detail(vars.id) });
+    },
+  });
+}
+
+export function useAtualizarResponsavelEquipamento() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      responsavelId,
+    }: {
+      id: number;
+      responsavelId: number | null;
+    }) => {
+      const { data } = await api.patch<EquipamentoResponse>(
+        `/equipamentos/${id}/responsavel`,
+        { responsavelId },
+      );
+      return data;
+    },
+    onSuccess: (_d, vars) => {
+      invalidarLeituras(qc);
+      qc.invalidateQueries({ queryKey: equipamentosKeys.detail(vars.id) });
+    },
+  });
+}
+
+export function useChamadosDoEquipamento(id: number | null) {
+  return useQuery({
+    queryKey: id != null ? [...equipamentosKeys.detail(id), 'chamados'] : ['equipamentos', 'noop'],
+    queryFn: async () => {
+      const { data } = await api.get<ChamadoResponse[]>(`/equipamentos/${id}/chamados`);
+      return data;
+    },
+    enabled: id != null,
+  });
+}
+
+export type TipoEventoEquipamento =
+  | 'CADASTRADO'
+  | 'STATUS_ALTERADO'
+  | 'RESPONSAVEL_ATRIBUIDO'
+  | 'RESPONSAVEL_REMOVIDO'
+  | 'ATUALIZADO'
+  | 'BAIXADO';
+
+export interface HistoricoEquipamentoResponse {
+  id: number;
+  tipoEvento: TipoEventoEquipamento;
+  descricao: string;
+  autorNome: string | null;
+  criadoEm: string;
+}
+
+export function useHistoricoEquipamento(id: number | null) {
+  return useQuery({
+    queryKey: id != null ? [...equipamentosKeys.detail(id), 'historico'] : ['equipamentos', 'noop'],
+    queryFn: async () => {
+      const { data } = await api.get<HistoricoEquipamentoResponse[]>(
+        `/equipamentos/${id}/historico`,
+      );
+      return data;
+    },
+    enabled: id != null,
   });
 }
 

@@ -11,7 +11,6 @@ import { ChamadosLista } from '@/pages/ChamadosLista';
 import { ChamadoDetalhe } from '@/pages/ChamadoDetalhe';
 import { EquipamentosLista } from '@/pages/EquipamentosLista';
 import { MeusEquipamentos } from '@/pages/MeusEquipamentos';
-import { EquipamentoForm } from '@/pages/EquipamentoForm';
 import { UsuariosLista } from '@/pages/UsuariosLista';
 import { UsuarioForm } from '@/pages/UsuarioForm';
 import { EmConstrucao } from '@/pages/EmConstrucao';
@@ -38,8 +37,6 @@ export default function App() {
 
             <Route element={<AdminRoute />}>
               <Route path="/equipamentos" element={<EquipamentosLista />} />
-              <Route path="/equipamentos/novo" element={<EquipamentoForm />} />
-              <Route path="/equipamentos/:id/editar" element={<EquipamentoForm />} />
               <Route path="/usuarios" element={<UsuariosLista />} />
               <Route path="/usuarios/novo" element={<UsuarioForm />} />
               <Route path="/usuarios/:id/editar" element={<UsuarioForm />} />

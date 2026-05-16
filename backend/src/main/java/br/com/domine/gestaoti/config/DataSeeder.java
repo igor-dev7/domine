@@ -18,6 +18,7 @@ import br.com.domine.gestaoti.enums.StatusEquipamento;
 import br.com.domine.gestaoti.enums.TipoEquipamento;
 import br.com.domine.gestaoti.enums.TipoEventoHistorico;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Sort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -54,13 +55,8 @@ public class DataSeeder implements CommandLineRunner {
             usuarios = usuarioRepository.findAll();
         }
 
-        List<Equipamento> equipamentos;
-        if (equipamentoRepository.count() == 0) {
-            log.info("DataSeeder: populando equipamentos...");
-            equipamentos = seedEquipamentos(usuarios);
-        } else {
-            equipamentos = equipamentoRepository.findAll();
-        }
+        log.info("DataSeeder: garantindo equipamentos...");
+        List<Equipamento> equipamentos = seedEquipamentos(usuarios);
 
         if (chamadoRepository.count() == 0) {
             log.info("DataSeeder: populando chamados...");
@@ -109,10 +105,13 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     private List<Equipamento> seedEquipamentos(List<Usuario> usuarios) {
+        Usuario admin = usuarios.get(0);
         Usuario marina = usuarios.get(1);
         Usuario carlos = usuarios.get(2);
+        Usuario joao = usuarios.get(3);
 
-        List<Equipamento> equipamentos = List.of(
+        List<Equipamento> todos = List.of(
+                // Notebooks
                 Equipamento.builder()
                         .patrimonio("PAT-0001")
                         .tipo(TipoEquipamento.NOTEBOOK)
@@ -162,9 +161,169 @@ public class DataSeeder implements CommandLineRunner {
                         .localizacao("Estoque TI")
                         .status(StatusEquipamento.ESTOQUE)
                         .dataAquisicao(LocalDate.of(2024, 9, 10))
+                        .build(),
+                Equipamento.builder()
+                        .patrimonio("PAT-0006")
+                        .tipo(TipoEquipamento.NOTEBOOK)
+                        .marca("Apple")
+                        .modelo("MacBook Pro 14 M3")
+                        .numeroSerie("C02ZW3XYZ1A2")
+                        .localizacao("Sala 301 - Diretoria")
+                        .status(StatusEquipamento.EM_USO)
+                        .responsavel(admin)
+                        .dataAquisicao(LocalDate.of(2024, 6, 12))
+                        .build(),
+                Equipamento.builder()
+                        .patrimonio("PAT-0007")
+                        .tipo(TipoEquipamento.NOTEBOOK)
+                        .marca("Apple")
+                        .modelo("MacBook Air 13 M2")
+                        .numeroSerie("C02XYZA8BC")
+                        .localizacao("Estoque TI")
+                        .status(StatusEquipamento.ESTOQUE)
+                        .dataAquisicao(LocalDate.of(2024, 8, 1))
+                        .build(),
+                Equipamento.builder()
+                        .patrimonio("PAT-0008")
+                        .tipo(TipoEquipamento.NOTEBOOK)
+                        .marca("HP")
+                        .modelo("EliteBook 840 G10")
+                        .numeroSerie("BR-NB-0008")
+                        .localizacao("Sala 110 - RH")
+                        .status(StatusEquipamento.EM_USO)
+                        .responsavel(joao)
+                        .dataAquisicao(LocalDate.of(2024, 1, 22))
+                        .build(),
+                Equipamento.builder()
+                        .patrimonio("PAT-0009")
+                        .tipo(TipoEquipamento.NOTEBOOK)
+                        .marca("Lenovo")
+                        .modelo("ThinkPad X1 Carbon Gen 11")
+                        .numeroSerie("BR-NB-0009")
+                        .localizacao("Estoque TI")
+                        .status(StatusEquipamento.ESTOQUE)
+                        .dataAquisicao(LocalDate.of(2024, 4, 5))
+                        .build(),
+                Equipamento.builder()
+                        .patrimonio("PAT-0010")
+                        .tipo(TipoEquipamento.DESKTOP)
+                        .marca("Dell")
+                        .modelo("OptiPlex 7090")
+                        .numeroSerie("BR-DT-0010")
+                        .localizacao("Sala 201 - Financeiro")
+                        .status(StatusEquipamento.EM_USO)
+                        .responsavel(marina)
+                        .dataAquisicao(LocalDate.of(2023, 8, 18))
+                        .build(),
+                Equipamento.builder()
+                        .patrimonio("PAT-0011")
+                        .tipo(TipoEquipamento.MONITOR)
+                        .marca("Dell")
+                        .modelo("UltraSharp U2723QE")
+                        .localizacao("Sala 105 - Comercial")
+                        .status(StatusEquipamento.EM_USO)
+                        .responsavel(carlos)
+                        .dataAquisicao(LocalDate.of(2024, 2, 9))
+                        .build(),
+                Equipamento.builder()
+                        .patrimonio("PAT-0012")
+                        .tipo(TipoEquipamento.MONITOR)
+                        .marca("Samsung")
+                        .modelo("Odyssey G5 27\"")
+                        .localizacao("Estoque TI")
+                        .status(StatusEquipamento.ESTOQUE)
+                        .dataAquisicao(LocalDate.of(2025, 1, 14))
+                        .build(),
+                Equipamento.builder()
+                        .patrimonio("PAT-0013")
+                        .tipo(TipoEquipamento.IMPRESSORA)
+                        .marca("HP")
+                        .modelo("LaserJet Pro M404dn")
+                        .localizacao("Sala 110 - RH")
+                        .status(StatusEquipamento.EM_USO)
+                        .responsavel(joao)
+                        .dataAquisicao(LocalDate.of(2023, 5, 30))
+                        .build(),
+                Equipamento.builder()
+                        .patrimonio("PAT-0014")
+                        .tipo(TipoEquipamento.CELULAR)
+                        .marca("Apple")
+                        .modelo("iPhone 14 Pro")
+                        .numeroSerie("IMEI-3589-1142")
+                        .localizacao("Sala 301 - Diretoria")
+                        .status(StatusEquipamento.EM_USO)
+                        .responsavel(admin)
+                        .dataAquisicao(LocalDate.of(2024, 5, 4))
+                        .build(),
+                Equipamento.builder()
+                        .patrimonio("PAT-0015")
+                        .tipo(TipoEquipamento.CELULAR)
+                        .marca("Xiaomi")
+                        .modelo("Redmi Note 12")
+                        .localizacao("Estoque TI")
+                        .status(StatusEquipamento.ESTOQUE)
+                        .dataAquisicao(LocalDate.of(2024, 11, 2))
+                        .build(),
+                Equipamento.builder()
+                        .patrimonio("PAT-0016")
+                        .tipo(TipoEquipamento.CELULAR)
+                        .marca("Motorola")
+                        .modelo("Moto G84 5G")
+                        .localizacao("Sala 110 - RH")
+                        .status(StatusEquipamento.EM_USO)
+                        .responsavel(joao)
+                        .dataAquisicao(LocalDate.of(2024, 10, 18))
+                        .build(),
+                Equipamento.builder()
+                        .patrimonio("PAT-0017")
+                        .tipo(TipoEquipamento.PERIFERICO)
+                        .marca("Logitech")
+                        .modelo("MX Keys Teclado Sem Fio")
+                        .localizacao("Sala 105 - Comercial")
+                        .status(StatusEquipamento.EM_USO)
+                        .responsavel(carlos)
+                        .dataAquisicao(LocalDate.of(2024, 3, 28))
+                        .build(),
+                Equipamento.builder()
+                        .patrimonio("PAT-0018")
+                        .tipo(TipoEquipamento.PERIFERICO)
+                        .marca("Logitech")
+                        .modelo("MX Master 3S Mouse")
+                        .localizacao("Sala 201 - Financeiro")
+                        .status(StatusEquipamento.EM_USO)
+                        .responsavel(marina)
+                        .dataAquisicao(LocalDate.of(2024, 3, 28))
+                        .build(),
+                Equipamento.builder()
+                        .patrimonio("PAT-0019")
+                        .tipo(TipoEquipamento.PERIFERICO)
+                        .marca("Sony")
+                        .modelo("WH-1000XM5 Fone Bluetooth")
+                        .localizacao("Estoque TI")
+                        .status(StatusEquipamento.ESTOQUE)
+                        .dataAquisicao(LocalDate.of(2025, 2, 6))
+                        .build(),
+                Equipamento.builder()
+                        .patrimonio("PAT-0020")
+                        .tipo(TipoEquipamento.OUTRO)
+                        .marca("Western Digital")
+                        .modelo("My Passport 2TB")
+                        .localizacao("Estoque TI")
+                        .status(StatusEquipamento.ESTOQUE)
+                        .observacoes("HD externo de backup.")
+                        .dataAquisicao(LocalDate.of(2023, 9, 12))
                         .build()
         );
-        return equipamentoRepository.saveAll(equipamentos);
+
+        // Seed idempotente: adiciona apenas os patrimônios que ainda não existem.
+        List<Equipamento> novos = todos.stream()
+                .filter(e -> !equipamentoRepository.existsByPatrimonio(e.getPatrimonio()))
+                .toList();
+        if (!novos.isEmpty()) {
+            equipamentoRepository.saveAll(novos);
+            log.info("DataSeeder: {} equipamentos novos inseridos.", novos.size());
+        }
+        return equipamentoRepository.findAll(Sort.by("id"));
     }
 
     private void seedChamados(List<Usuario> usuarios, List<Equipamento> equipamentos) {

@@ -1,6 +1,8 @@
 import { Outlet } from 'react-router-dom';
 import { UserSettingsModal } from '@/components/settings/UserSettingsModal';
 import { NovoChamadoModal } from '@/components/chamado/NovoChamadoModal';
+import { NovoEquipamentoModal } from '@/components/equipamento/NovoEquipamentoModal';
+import { EquipamentoSheet } from '@/components/equipamento/EquipamentoSheet';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 
@@ -18,6 +20,8 @@ export function AppLayout() {
       </main>
       <UserSettingsModal />
       <NovoChamadoModal />
+      <NovoEquipamentoModal />
+      <EquipamentoSheet />
     </div>
   );
 }

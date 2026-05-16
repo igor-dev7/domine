@@ -29,4 +29,5 @@ public interface ChamadoService {
     ComentarioResponse adicionarComentario(Long chamadoId, ComentarioRequest request);
     List<HistoricoResponse> listarHistorico(Long chamadoId);
     DashboardResponse dashboard();
+    List<ChamadoResponse> listarPorEquipamento(Long equipamentoId);
 }

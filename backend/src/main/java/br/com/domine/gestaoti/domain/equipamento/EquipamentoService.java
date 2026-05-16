@@ -3,10 +3,13 @@ package br.com.domine.gestaoti.domain.equipamento;
 import br.com.domine.gestaoti.domain.equipamento.dto.EquipamentoRequest;
 import br.com.domine.gestaoti.domain.equipamento.dto.EquipamentoResponse;
 import br.com.domine.gestaoti.domain.equipamento.dto.EquipamentoUpdateRequest;
+import br.com.domine.gestaoti.domain.equipamento.dto.HistoricoEquipamentoResponse;
 import br.com.domine.gestaoti.enums.StatusEquipamento;
 import br.com.domine.gestaoti.enums.TipoEquipamento;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+
+import java.util.List;
 
 /**
  * POO — Abstração: interface define o contrato, implementação
@@ -18,5 +21,8 @@ public interface EquipamentoService {
     EquipamentoResponse buscarPorId(Long id);
     EquipamentoResponse criar(EquipamentoRequest request);
     EquipamentoResponse atualizar(Long id, EquipamentoUpdateRequest request);
+    EquipamentoResponse alterarStatus(Long id, StatusEquipamento status);
+    EquipamentoResponse alterarResponsavel(Long id, Long responsavelId);
     void baixar(Long id);
+    List<HistoricoEquipamentoResponse> listarHistorico(Long id);
 }

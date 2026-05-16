@@ -40,6 +40,8 @@ public interface ChamadoRepository extends JpaRepository<Chamado, Long> {
 
     List<Chamado> findBySolicitanteIdOrderByCriadoEmDesc(Long solicitanteId);
 
+    List<Chamado> findByEquipamentoIdOrderByCriadoEmDesc(Long equipamentoId);
+
     long countByStatus(StatusChamado status);
 
     long countByStatusAndResolvidoEmAfter(StatusChamado status, LocalDateTime since);

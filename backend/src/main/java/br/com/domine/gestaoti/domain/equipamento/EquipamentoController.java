@@ -1,8 +1,13 @@
 package br.com.domine.gestaoti.domain.equipamento;
 
+import br.com.domine.gestaoti.domain.chamado.ChamadoService;
+import br.com.domine.gestaoti.domain.chamado.dto.ChamadoResponse;
+import br.com.domine.gestaoti.domain.equipamento.dto.AlterarResponsavelRequest;
+import br.com.domine.gestaoti.domain.equipamento.dto.AlterarStatusRequest;
 import br.com.domine.gestaoti.domain.equipamento.dto.EquipamentoRequest;
 import br.com.domine.gestaoti.domain.equipamento.dto.EquipamentoResponse;
 import br.com.domine.gestaoti.domain.equipamento.dto.EquipamentoUpdateRequest;
+import br.com.domine.gestaoti.domain.equipamento.dto.HistoricoEquipamentoResponse;
 import br.com.domine.gestaoti.enums.StatusEquipamento;
 import br.com.domine.gestaoti.enums.TipoEquipamento;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -15,6 +20,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -24,6 +30,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/equipamentos")
 @RequiredArgsConstructor
@@ -31,6 +39,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class EquipamentoController {
 
     private final EquipamentoService equipamentoService;
+    private final ChamadoService chamadoService;
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -63,6 +72,30 @@ public class EquipamentoController {
     @PreAuthorize("hasRole('ADMIN')")
     public EquipamentoResponse atualizar(@PathVariable Long id, @Valid @RequestBody EquipamentoUpdateRequest request) {
         return equipamentoService.atualizar(id, request);
+    }
+
+    @PatchMapping("/{id}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    public EquipamentoResponse alterarStatus(@PathVariable Long id, @Valid @RequestBody AlterarStatusRequest req) {
+        return equipamentoService.alterarStatus(id, req.status());
+    }
+
+    @PatchMapping("/{id}/responsavel")
+    @PreAuthorize("hasRole('ADMIN')")
+    public EquipamentoResponse alterarResponsavel(@PathVariable Long id, @RequestBody AlterarResponsavelRequest req) {
+        return equipamentoService.alterarResponsavel(id, req.responsavelId());
+    }
+
+    @GetMapping("/{id}/chamados")
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<ChamadoResponse> chamadosDoEquipamento(@PathVariable Long id) {
+        return chamadoService.listarPorEquipamento(id);
+    }
+
+    @GetMapping("/{id}/historico")
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<HistoricoEquipamentoResponse> historicoDoEquipamento(@PathVariable Long id) {
+        return equipamentoService.listarHistorico(id);
     }
 
     @DeleteMapping("/{id}")

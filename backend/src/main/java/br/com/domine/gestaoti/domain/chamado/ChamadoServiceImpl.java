@@ -253,6 +253,14 @@ public class ChamadoServiceImpl implements ChamadoService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<ChamadoResponse> listarPorEquipamento(Long equipamentoId) {
+        return chamadoRepository.findByEquipamentoIdOrderByCriadoEmDesc(equipamentoId).stream()
+                .map(ChamadoResponse::resumo)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public DashboardResponse dashboard() {
         long abertos = chamadoRepository.countByStatus(StatusChamado.ABERTO);
         long emAtendimento = chamadoRepository.countByStatus(StatusChamado.EM_ATENDIMENTO);
