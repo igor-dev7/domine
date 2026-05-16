@@ -6,6 +6,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import App from './App';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { SettingsModalProvider } from '@/contexts/SettingsModalContext';
+import { NovoChamadoModalProvider } from '@/contexts/NovoChamadoModalContext';
 import './index.css';
 
 const queryClient = new QueryClient({
@@ -21,7 +22,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <BrowserRouter>
           <AuthProvider>
             <SettingsModalProvider>
-              <App />
+              <NovoChamadoModalProvider>
+                <App />
+              </NovoChamadoModalProvider>
             </SettingsModalProvider>
           </AuthProvider>
         </BrowserRouter>

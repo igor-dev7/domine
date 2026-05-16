@@ -19,7 +19,8 @@ import java.util.List;
 
 public interface ChamadoService {
     Page<ChamadoResponse> listar(StatusChamado status, PrioridadeChamado prioridade,
-                                 CategoriaChamado categoria, Long tecnicoId, Pageable pageable);
+                                 CategoriaChamado categoria, Long tecnicoId, String busca,
+                                 Pageable pageable);
     ChamadoResponse buscarPorId(Long id);
     ChamadoResponse criar(ChamadoRequest request);
     ChamadoResponse atualizar(Long id, ChamadoUpdateRequest request);

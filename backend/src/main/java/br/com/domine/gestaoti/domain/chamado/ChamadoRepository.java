@@ -23,6 +23,10 @@ public interface ChamadoRepository extends JpaRepository<Chamado, Long> {
               AND (:prioridade IS NULL OR c.prioridade = :prioridade)
               AND (:categoria IS NULL OR c.categoria = :categoria)
               AND (:tecnicoId IS NULL OR c.tecnicoResponsavel.id = :tecnicoId)
+              AND (:busca IS NULL
+                   OR LOWER(c.titulo) LIKE LOWER(CONCAT('%', :busca, '%'))
+                   OR LOWER(c.descricao) LIKE LOWER(CONCAT('%', :busca, '%')))
+            ORDER BY c.criadoEm DESC, c.id DESC
             """)
     Page<Chamado> filtrar(
             @Param("solicitanteId") Long solicitanteId,
@@ -30,6 +34,7 @@ public interface ChamadoRepository extends JpaRepository<Chamado, Long> {
             @Param("prioridade") PrioridadeChamado prioridade,
             @Param("categoria") CategoriaChamado categoria,
             @Param("tecnicoId") Long tecnicoId,
+            @Param("busca") String busca,
             Pageable pageable
     );
 

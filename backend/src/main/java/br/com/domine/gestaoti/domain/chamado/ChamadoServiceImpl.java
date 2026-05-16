@@ -51,10 +51,12 @@ public class ChamadoServiceImpl implements ChamadoService {
     @Override
     @Transactional(readOnly = true)
     public Page<ChamadoResponse> listar(StatusChamado status, PrioridadeChamado prioridade,
-                                         CategoriaChamado categoria, Long tecnicoId, Pageable pageable) {
+                                         CategoriaChamado categoria, Long tecnicoId, String busca,
+                                         Pageable pageable) {
         Usuario me = SecurityUtils.usuarioAtual();
         Long solicitanteId = me.isAdmin() ? null : me.getId();
-        return chamadoRepository.filtrar(solicitanteId, status, prioridade, categoria, tecnicoId, pageable)
+        String buscaSan = (busca == null || busca.isBlank()) ? null : busca.trim();
+        return chamadoRepository.filtrar(solicitanteId, status, prioridade, categoria, tecnicoId, buscaSan, pageable)
                 .map(ChamadoResponse::resumo);
     }
 

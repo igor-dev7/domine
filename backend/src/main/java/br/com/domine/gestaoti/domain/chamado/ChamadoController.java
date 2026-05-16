@@ -46,9 +46,10 @@ public class ChamadoController {
             @RequestParam(required = false) PrioridadeChamado prioridade,
             @RequestParam(required = false) CategoriaChamado categoria,
             @RequestParam(required = false) Long tecnicoResponsavelId,
+            @RequestParam(required = false) String busca,
             Pageable pageable
     ) {
-        return chamadoService.listar(status, prioridade, categoria, tecnicoResponsavelId, pageable);
+        return chamadoService.listar(status, prioridade, categoria, tecnicoResponsavelId, busca, pageable);
     }
 
     @GetMapping("/dashboard")

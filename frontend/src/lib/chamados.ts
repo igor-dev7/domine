@@ -110,6 +110,23 @@ export function useAtualizarStatus(id: number) {
   });
 }
 
+// Versão sem id fixo — útil em listagens onde cada linha pode mudar o status.
+export function useAtualizarStatusDe() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, status }: { id: number; status: StatusChamado }) => {
+      const { data } = await api.patch<ChamadoResponse>(`/chamados/${id}/status`, { status });
+      return data;
+    },
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: chamadosKeys.detail(variables.id) });
+      qc.invalidateQueries({ queryKey: chamadosKeys.historico(variables.id) });
+      qc.invalidateQueries({ queryKey: chamadosKeys.lists() });
+      qc.invalidateQueries({ queryKey: chamadosKeys.dashboard() });
+    },
+  });
+}
+
 export function useAtribuirTecnico(id: number) {
   const qc = useQueryClient();
   return useMutation({

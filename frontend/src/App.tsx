@@ -9,7 +9,6 @@ import { Login } from '@/pages/Login';
 import { Dashboard } from '@/pages/Dashboard';
 import { ChamadosLista } from '@/pages/ChamadosLista';
 import { ChamadoDetalhe } from '@/pages/ChamadoDetalhe';
-import { ChamadoNovo } from '@/pages/ChamadoNovo';
 import { EquipamentosLista } from '@/pages/EquipamentosLista';
 import { MeusEquipamentos } from '@/pages/MeusEquipamentos';
 import { EquipamentoForm } from '@/pages/EquipamentoForm';
@@ -34,7 +33,6 @@ export default function App() {
           <Route element={<AppLayout />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/chamados" element={<ChamadosLista />} />
-            <Route path="/chamados/novo" element={<ChamadoNovo />} />
             <Route path="/chamados/:id" element={<ChamadoDetalhe />} />
             <Route path="/equipamentos/meus" element={<MeusEquipamentos />} />
 

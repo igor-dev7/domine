@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router-dom';
 import { UserSettingsModal } from '@/components/settings/UserSettingsModal';
+import { NovoChamadoModal } from '@/components/chamado/NovoChamadoModal';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 
@@ -16,6 +17,7 @@ export function AppLayout() {
         </div>
       </main>
       <UserSettingsModal />
+      <NovoChamadoModal />
     </div>
   );
 }

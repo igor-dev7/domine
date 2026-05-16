@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNovoChamadoModal } from '@/contexts/NovoChamadoModalContext';
 import { useSettingsModal } from '@/contexts/SettingsModalContext';
 import { Logo } from '@/components/Logo';
 import {
@@ -83,7 +84,6 @@ const itensComum: ItemSidebar[] = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/chamados', label: 'Meus chamados', icon: Ticket },
   { to: '/equipamentos/meus', label: 'Meus equipamentos', icon: Monitor },
-  { to: '/chamados/novo', label: 'Novo chamado', icon: Plus },
 ];
 
 const gruposAdmin: GrupoSidebar[] = [
@@ -114,6 +114,7 @@ const gruposAdmin: GrupoSidebar[] = [
 export function Sidebar() {
   const { usuario, logout } = useAuth();
   const { abrir: abrirSettings } = useSettingsModal();
+  const { abrir: abrirNovoChamado } = useNovoChamadoModal();
   const [colapsada, setColapsada] = useState(false);
   const isAdmin = usuario?.perfil === 'ADMIN';
 
@@ -160,8 +161,24 @@ export function Sidebar() {
         </HoverHint>
       </div>
 
+      {/* CTA: Novo chamado (somente para perfis comuns) */}
+      {!isAdmin && (
+        <div className="px-2 pt-4">
+          <BotaoNovoChamado
+            colapsada={colapsada}
+            delay={next()}
+            onClick={abrirNovoChamado}
+          />
+        </div>
+      )}
+
       {/* Navegação */}
-      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto overflow-x-hidden px-2 pt-2">
+      <nav
+        className={cn(
+          'flex flex-1 flex-col gap-1 overflow-y-auto overflow-x-hidden px-2',
+          isAdmin ? 'pt-4' : 'pt-5',
+        )}
+      >
         {isAdmin
           ? gruposAdmin.map((grupo) => (
               <GrupoNav
@@ -495,5 +512,46 @@ function AparenciaAcao({ colapsada, delay }: { colapsada: boolean; delay: number
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+// CTA do topo da sidebar — abre o modal de novo chamado.
+function BotaoNovoChamado({
+  colapsada,
+  delay,
+  onClick,
+}: {
+  colapsada: boolean;
+  delay: number;
+  onClick: () => void;
+}) {
+  return (
+    <HoverHint active={colapsada} label="Novo chamado">
+      <button
+        type="button"
+        onClick={onClick}
+        style={{ animationDelay: `${delay}ms` }}
+        className={cn(
+          'animate-element flex w-full items-center gap-2 rounded-2xl text-sm font-medium text-on-primary transition-all duration-500 ease-in-out',
+          'bg-gradient-to-t from-primary-deep via-primary to-primary-soft',
+          'shadow-[inset_0_1px_0_0_rgba(255,255,255,0.22),0_2px_4px_rgba(37,99,235,0.25)]',
+          'hover:from-primary hover:via-primary-soft hover:to-primary-soft',
+          'hover:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.3),0_4px_12px_rgba(37,99,235,0.4)]',
+          'active:scale-[0.98]',
+          colapsada ? 'h-9 justify-center px-0' : 'px-3 py-2',
+        )}
+        aria-label="Abrir novo chamado"
+      >
+        <Plus size={16} className="shrink-0" />
+        <span
+          className={cn(
+            'truncate whitespace-nowrap transition-all duration-500 ease-in-out',
+            colapsada ? 'w-0 opacity-0' : 'flex-1 text-left opacity-100',
+          )}
+        >
+          Novo chamado
+        </span>
+      </button>
+    </HoverHint>
   );
 }

@@ -1,19 +1,26 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AxiosError } from 'axios';
+import { AnimatePresence, motion } from 'framer-motion';
 import { toast } from 'sonner';
 import {
   ArrowLeft,
+  ArrowRight,
+  Calendar,
+  CheckCircle2,
+  CornerUpLeft,
+  ExternalLink,
   History,
+  Lightbulb,
   MessageSquare,
   Monitor,
   Send,
+  Sparkles,
   User as UserIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
@@ -35,6 +42,7 @@ import {
   useHistoricoChamado,
 } from '@/lib/chamados';
 import { useAdmins } from '@/lib/usuarios';
+import { sugerirArtigos, type Artigo } from '@/lib/baseConhecimento';
 import {
   categoriaChamadoLabel,
   formatarDataHora,
@@ -42,7 +50,26 @@ import {
   statusChamadoLabel,
   tipoEventoLabel,
 } from '@/lib/format';
+import { cn } from '@/lib/utils';
 import type { ComentarioResponse, ErroResponse, HistoricoResponse, StatusChamado } from '@/types';
+
+const SIDEBAR_EASE = [0.16, 1, 0.3, 1] as const;
+
+const stagger = {
+  container: {
+    hidden: {},
+    visible: { transition: { staggerChildren: 0.1, delayChildren: 0.05 } },
+  },
+  item: {
+    hidden: { opacity: 0, y: 18, filter: 'blur(10px)' },
+    visible: {
+      opacity: 1,
+      y: 0,
+      filter: 'blur(0px)',
+      transition: { duration: 0.7, ease: SIDEBAR_EASE },
+    },
+  },
+};
 
 const STATUS_OPCOES: StatusChamado[] = [
   'ABERTO',
@@ -51,10 +78,6 @@ const STATUS_OPCOES: StatusChamado[] = [
   'RESOLVIDO',
   'FECHADO',
 ];
-
-type EventoTimeline =
-  | { tipo: 'comentario'; criadoEm: string; dado: ComentarioResponse }
-  | { tipo: 'historico'; criadoEm: string; dado: HistoricoResponse };
 
 export function ChamadoDetalhe() {
   const params = useParams<{ id: string }>();
@@ -72,17 +95,29 @@ export function ChamadoDetalhe() {
   const adicionarComentario = useAdicionarComentario(id ?? 0);
 
   const [comentario, setComentario] = useState('');
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const [tab, setTab] = useState<'comentarios' | 'atividade'>('comentarios');
 
-  const timeline = useMemo<EventoTimeline[]>(() => {
-    const comentarios = chamado?.comentarios ?? [];
-    const hist = historico ?? [];
-    // List<EventoTimeline> ordenada por criadoEm asc (estrutura de dados acadêmica)
-    const eventos: EventoTimeline[] = [
-      ...comentarios.map((c) => ({ tipo: 'comentario' as const, criadoEm: c.criadoEm, dado: c })),
-      ...hist.map((h) => ({ tipo: 'historico' as const, criadoEm: h.criadoEm, dado: h })),
-    ];
-    return eventos.sort((a, b) => a.criadoEm.localeCompare(b.criadoEm));
-  }, [chamado, historico]);
+  const comentarios = useMemo(
+    () =>
+      [...(chamado?.comentarios ?? [])].sort((a, b) =>
+        a.criadoEm.localeCompare(b.criadoEm),
+      ),
+    [chamado],
+  );
+  const eventos = useMemo(
+    () => [...(historico ?? [])].sort((a, b) => b.criadoEm.localeCompare(a.criadoEm)),
+    [historico],
+  );
+
+  const sugestoes = useMemo<Artigo[]>(() => {
+    if (!chamado) return [];
+    return sugerirArtigos({
+      categoria: chamado.categoria,
+      titulo: chamado.titulo,
+      descricao: chamado.descricao,
+    });
+  }, [chamado]);
 
   if (isLoading) {
     return (
@@ -119,7 +154,7 @@ export function ChamadoDetalhe() {
   async function mudarStatus(novo: StatusChamado) {
     try {
       await atualizarStatus.mutateAsync(novo);
-      toast.success(`Status alterado para ${statusChamadoLabel[novo]}.`);
+      toast.success(`Status alterado para ${statusChamadoLabel[novo].toLowerCase()}.`);
     } catch (err) {
       const ax = err as AxiosError<ErroResponse>;
       toast.error(ax.response?.data?.mensagens?.[0] ?? 'Erro ao mudar status.');
@@ -150,146 +185,218 @@ export function ChamadoDetalhe() {
     }
   }
 
+  function responderA(c: ComentarioResponse) {
+    const mention = `@${c.autorNome}: `;
+    const atual = comentario.trim();
+    const prefixo = atual && !atual.endsWith('\n\n') ? `${atual}\n\n` : atual;
+    setComentario(`${prefixo}${mention}`);
+    setTab('comentarios');
+    // foco no fim do textarea
+    setTimeout(() => {
+      const el = textareaRef.current;
+      if (el) {
+        el.focus();
+        el.setSelectionRange(el.value.length, el.value.length);
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 50);
+  }
+
   return (
-    <div className="space-y-6">
-      <div>
-        <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="mb-3 -ml-3">
-          <ArrowLeft className="mr-2 h-4 w-4" />
+    <motion.div
+      initial="hidden"
+      animate="visible"
+      variants={stagger.container}
+      className="space-y-6"
+    >
+      {/* Header */}
+      <motion.div variants={stagger.item} className="space-y-3">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-mute transition-colors hover:text-ink"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
           Voltar
-        </Button>
-        <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-          Chamado <span className="font-mono">#{chamado.id}</span>
-        </p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-ink-strong">
-          {chamado.titulo}
-        </h1>
-        <p className="mt-2 text-sm text-mute">
-          Aberto por <span className="text-ink">{chamado.solicitanteNome}</span> em{' '}
-          {formatarDataHora(chamado.criadoEm)}
-        </p>
-      </div>
+        </button>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-semibold uppercase tracking-wider text-mute">
-                Descrição
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="whitespace-pre-wrap text-sm text-body">{chamado.descricao}</p>
-              {chamado.equipamentoPatrimonio && (
-                <div className="mt-4 flex items-center gap-2 rounded-sm border border-hairline bg-canvas-soft px-3 py-2 text-xs text-body">
-                  <Monitor className="h-4 w-4 text-primary" />
-                  Equipamento: <span className="font-semibold text-ink">{chamado.equipamentoPatrimonio}</span>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+              Chamado <span className="font-mono">#{chamado.id}</span>
+            </p>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight text-ink-strong">
+              {chamado.titulo}
+            </h1>
+            <p className="mt-2 text-sm text-mute">
+              Aberto por <span className="text-ink">{chamado.solicitanteNome}</span> em{' '}
+              {formatarDataHora(chamado.criadoEm)}
+            </p>
+          </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-semibold uppercase tracking-wider text-mute">
-                Atividade
-              </CardTitle>
-              <p className="text-xs text-body">
-                Comentários e histórico de eventos em ordem cronológica.
-              </p>
-            </CardHeader>
-            <CardContent>
-              {timeline.length === 0 ? (
-                <EmptyState
-                  titulo="Sem atividade ainda."
-                  descricao="Adicione o primeiro comentário abaixo."
-                />
-              ) : (
-                <ol className="space-y-4">
-                  {timeline.map((ev, i) => (
-                    <li key={`${ev.tipo}-${ev.dado.id}-${i}`}>
-                      {ev.tipo === 'comentario' ? (
-                        <ItemComentario c={ev.dado} />
-                      ) : (
-                        <ItemHistorico h={ev.dado} />
-                      )}
-                    </li>
-                  ))}
-                </ol>
-              )}
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusBadge status={chamado.status} />
+            <PrioridadeBadge prioridade={chamado.prioridade} />
+            <span className="rounded-sm border border-hairline bg-canvas-soft/40 px-2 py-0.5 text-xs font-semibold uppercase tracking-wider text-mute">
+              {categoriaChamadoLabel[chamado.categoria]}
+            </span>
+          </div>
+        </div>
+      </motion.div>
 
-              <Separator className="my-6" />
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+        {/* Coluna principal */}
+        <div className="space-y-6">
+          {/* Resumo */}
+          <motion.div variants={stagger.item} className="rounded-3xl bg-[#1a1a1a] p-6">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-mute">
+              Resumo do chamado
+            </h2>
+            <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-body">
+              {chamado.descricao}
+            </p>
+            {chamado.equipamentoPatrimonio && (
+              <div className="mt-4 flex items-center gap-2 rounded-2xl bg-[#131313] px-4 py-3 text-xs text-body">
+                <Monitor className="h-4 w-4 text-primary" />
+                Equipamento:{' '}
+                <span className="font-semibold text-ink">
+                  {chamado.equipamentoPatrimonio}
+                </span>
+              </div>
+            )}
+          </motion.div>
 
-              <form onSubmit={enviarComentario} className="space-y-3">
-                <Label htmlFor="novo-comentario">Adicionar comentário</Label>
-                <Textarea
-                  id="novo-comentario"
-                  rows={3}
-                  value={comentario}
-                  onChange={(e) => setComentario(e.target.value)}
-                  placeholder="Escreva uma atualização ou pergunta…"
-                />
-                <div className="flex justify-end">
-                  <Button
-                    type="submit"
-                    disabled={!comentario.trim() || adicionarComentario.isPending}
-                  >
-                    <Send className="mr-2 h-4 w-4" />
-                    {adicionarComentario.isPending ? 'Enviando…' : 'Comentar'}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
+          {/* Tabs: Comentários | Atividade */}
+          <motion.div variants={stagger.item} className="rounded-3xl bg-[#1a1a1a] p-6">
+            <Tabs
+              value={tab}
+              onValueChange={(v) => setTab(v as 'comentarios' | 'atividade')}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <TabsList>
+                  <TabsTrigger value="comentarios">
+                    <MessageSquare className="h-3.5 w-3.5" />
+                    Comentários
+                    <span className="ml-1 rounded-md bg-[#2a2a2a] px-1.5 text-[10px] font-semibold text-mute">
+                      {comentarios.length}
+                    </span>
+                  </TabsTrigger>
+                  <TabsTrigger value="atividade">
+                    <History className="h-3.5 w-3.5" />
+                    Atividade
+                    <span className="ml-1 rounded-md bg-[#2a2a2a] px-1.5 text-[10px] font-semibold text-mute">
+                      {eventos.length}
+                    </span>
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+
+              <TabsContent value="comentarios" className="mt-5 space-y-4">
+                {comentarios.length === 0 ? (
+                  <p className="rounded-2xl bg-[#131313] px-4 py-8 text-center text-sm text-mute">
+                    Sem comentários ainda. Seja o primeiro a comentar.
+                  </p>
+                ) : (
+                  <ul className="space-y-3">
+                    <AnimatePresence initial={false}>
+                      {comentarios.map((c) => (
+                        <motion.li
+                          key={c.id}
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          <ComentarioItem c={c} onResponder={() => responderA(c)} />
+                        </motion.li>
+                      ))}
+                    </AnimatePresence>
+                  </ul>
+                )}
+
+                <form onSubmit={enviarComentario} className="space-y-2">
+                  <Label htmlFor="novo-comentario" className="sr-only">
+                    Adicionar comentário
+                  </Label>
+                  <Textarea
+                    id="novo-comentario"
+                    ref={textareaRef}
+                    rows={3}
+                    value={comentario}
+                    onChange={(e) => setComentario(e.target.value)}
+                    placeholder="Escreva uma atualização, faça uma pergunta ou responda a alguém usando @nome…"
+                  />
+                  <div className="flex justify-end">
+                    <Button
+                      type="submit"
+                      className="rounded-2xl"
+                      disabled={!comentario.trim() || adicionarComentario.isPending}
+                    >
+                      <Send className="h-4 w-4" />
+                      {adicionarComentario.isPending ? 'Enviando…' : 'Comentar'}
+                    </Button>
+                  </div>
+                </form>
+              </TabsContent>
+
+              <TabsContent value="atividade" className="mt-5">
+                {eventos.length === 0 ? (
+                  <p className="rounded-2xl bg-[#131313] px-4 py-8 text-center text-sm text-mute">
+                    Sem atividade registrada ainda.
+                  </p>
+                ) : (
+                  <ol className="relative space-y-4 pl-6 before:absolute before:left-[11px] before:top-1 before:bottom-1 before:w-px before:bg-[#2a2a2a]">
+                    {eventos.map((h) => (
+                      <AtividadeItem key={h.id} h={h} />
+                    ))}
+                  </ol>
+                )}
+              </TabsContent>
+            </Tabs>
+          </motion.div>
         </div>
 
+        {/* Coluna lateral */}
         <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-semibold uppercase tracking-wider text-mute">
-                Situação
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Linha rotulo="Status">
-                <StatusBadge status={chamado.status} />
-              </Linha>
-              <Linha rotulo="Prioridade">
-                <PrioridadeBadge prioridade={chamado.prioridade} />
-              </Linha>
-              <Linha rotulo="Categoria">
-                <span className="text-sm text-ink">{categoriaChamadoLabel[chamado.categoria]}</span>
-              </Linha>
-              <Linha rotulo="Solicitante">
-                <span className="text-sm text-ink">{chamado.solicitanteNome}</span>
-              </Linha>
-              <Linha rotulo="Técnico">
-                <span className="text-sm text-ink">
-                  {chamado.tecnicoResponsavelNome ?? <span className="text-mute">Não atribuído</span>}
-                </span>
-              </Linha>
-              <Linha rotulo="Aberto em">
-                <span className="text-xs text-body">{formatarDataHora(chamado.criadoEm)}</span>
-              </Linha>
-              {chamado.resolvidoEm && (
-                <Linha rotulo="Resolvido em">
-                  <span className="text-xs text-emerald-300">
-                    {formatarDataHora(chamado.resolvidoEm)}
-                  </span>
-                </Linha>
-              )}
-            </CardContent>
-          </Card>
+          {/* Pessoas */}
+          <motion.div variants={stagger.item} className="rounded-3xl bg-[#1a1a1a] p-5">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-mute">
+              Pessoas
+            </h3>
+            <div className="mt-4 space-y-3">
+              <PessoaLinha rotulo="Solicitante" nome={chamado.solicitanteNome} />
+              <PessoaLinha
+                rotulo="Técnico responsável"
+                nome={chamado.tecnicoResponsavelNome ?? 'Sem técnico atribuído'}
+                apagado={!chamado.tecnicoResponsavelNome}
+              />
+            </div>
 
+            <div className="mt-4 space-y-2 border-t border-[#2a2a2a] pt-4 text-xs">
+              <DataLinha
+                icon={Calendar}
+                rotulo="Aberto em"
+                valor={formatarDataHora(chamado.criadoEm)}
+              />
+              {chamado.resolvidoEm && (
+                <DataLinha
+                  icon={CheckCircle2}
+                  rotulo="Resolvido em"
+                  valor={formatarDataHora(chamado.resolvidoEm)}
+                  destaque="emerald"
+                />
+              )}
+            </div>
+          </motion.div>
+
+          {/* Ações admin */}
           {isAdmin && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm font-semibold uppercase tracking-wider text-mute">
-                  Ações ADMIN
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Mudar status</Label>
+            <motion.div variants={stagger.item} className="rounded-3xl bg-[#1a1a1a] p-5">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-mute">
+                Ações rápidas
+              </h3>
+              <div className="mt-4 space-y-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-mute">Status</Label>
                   <Select
                     value={chamado.status}
                     onValueChange={(v) => mudarStatus(v as StatusChamado)}
@@ -307,8 +414,8 @@ export function ChamadoDetalhe() {
                   </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Atribuir técnico</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-mute">Atribuir técnico</Label>
                   <Select
                     value={chamado.tecnicoResponsavelId?.toString() ?? ''}
                     onValueChange={(v) => atribuir(Number(v))}
@@ -328,65 +435,177 @@ export function ChamadoDetalhe() {
                     <p className="text-xs text-mute">Nenhum administrador disponível.</p>
                   )}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Sugestões da base de conhecimento */}
+          {sugestoes.length > 0 && (
+            <motion.div variants={stagger.item} className="rounded-3xl bg-[#1a1a1a] p-5">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-3.5 w-3.5 text-primary" />
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-mute">
+                  Pode ajudar
+                </h3>
+              </div>
+              <p className="mt-1 text-xs text-mute">
+                Artigos da base de conhecimento relacionados.
+              </p>
+              <ul className="mt-3 space-y-2">
+                {sugestoes.map((a) => (
+                  <li key={a.id}>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        toast.info(`Abrindo artigo: "${a.titulo}" (página em breve).`)
+                      }
+                      className="group flex w-full items-start gap-3 rounded-2xl bg-[#131313] px-3 py-3 text-left transition-colors hover:bg-gradient-to-r hover:from-primary/10 hover:to-transparent"
+                    >
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+                        <Lightbulb className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-semibold text-ink line-clamp-2">
+                          {a.titulo}
+                        </p>
+                        <p className="mt-1 text-[10px] uppercase tracking-wider text-mute">
+                          {a.categoria} · {a.uteis} úteis
+                        </p>
+                      </div>
+                      <ExternalLink className="h-3.5 w-3.5 shrink-0 text-mute opacity-0 transition-opacity group-hover:opacity-100" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <button
+                type="button"
+                onClick={() => navigate('/base-conhecimento')}
+                className="mt-3 inline-flex items-center gap-1 text-xs text-primary transition-colors hover:text-primary-soft"
+              >
+                Ver toda a base
+                <ArrowRight className="h-3 w-3" />
+              </button>
+            </motion.div>
           )}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
-function Linha({ rotulo, children }: { rotulo: string; children: React.ReactNode }) {
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <span className="text-xs font-semibold uppercase tracking-wider text-mute">{rotulo}</span>
-      <div className="text-right">{children}</div>
-    </div>
-  );
-}
+// ─────────────────── Comentário ───────────────────
 
-function ItemComentario({ c }: { c: ComentarioResponse }) {
+function ComentarioItem({
+  c,
+  onResponder,
+}: {
+  c: ComentarioResponse;
+  onResponder: () => void;
+}) {
   return (
-    <div className="flex gap-3">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-hairline bg-canvas-soft text-xs font-semibold text-ink">
+    <div className="group flex gap-3 rounded-2xl bg-[#131313] p-4">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/15 text-xs font-semibold text-primary">
         {iniciaisDe(c.autorNome)}
-      </div>
-      <div className="min-w-0 flex-1 rounded-sm border border-hairline bg-canvas-soft p-3">
+      </span>
+      <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <p className="flex items-center gap-2 text-sm font-semibold text-ink">
-            <MessageSquare className="h-3.5 w-3.5 text-primary" />
-            {c.autorNome}
-          </p>
+          <p className="text-sm font-semibold text-ink">{c.autorNome}</p>
           <p className="text-xs text-mute">{formatarDataHora(c.criadoEm)}</p>
         </div>
-        <p className="mt-2 whitespace-pre-wrap text-sm text-body">{c.texto}</p>
+        <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-body">
+          {c.texto}
+        </p>
+        <button
+          type="button"
+          onClick={onResponder}
+          className="mt-2 inline-flex items-center gap-1 text-xs text-mute transition-colors hover:text-primary"
+        >
+          <CornerUpLeft className="h-3 w-3" />
+          Responder
+        </button>
       </div>
     </div>
   );
 }
 
-function ItemHistorico({ h }: { h: HistoricoResponse }) {
+// ─────────────────── Atividade ───────────────────
+
+function AtividadeItem({ h }: { h: HistoricoResponse }) {
   return (
-    <div className="flex gap-3">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-dashed border-hairline text-mute">
-        <History className="h-4 w-4" />
-      </div>
-      <div className="min-w-0 flex-1 border-l-2 border-hairline pl-3">
-        <p className="text-xs font-semibold uppercase tracking-wider text-mute">
-          {tipoEventoLabel[h.tipoEvento]}
+    <li className="relative">
+      <span className="absolute -left-[18px] top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#2a2a2a] ring-2 ring-[#1a1a1a]">
+        <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+      </span>
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-mute">
+        {tipoEventoLabel[h.tipoEvento]}
+      </p>
+      <p className="mt-1 text-sm text-body">{h.descricao}</p>
+      <p className="mt-1 flex items-center gap-2 text-xs text-mute">
+        {h.autorNome && (
+          <>
+            <UserIcon className="h-3 w-3" />
+            {h.autorNome} ·
+          </>
+        )}
+        <span>{formatarDataHora(h.criadoEm)}</span>
+      </p>
+    </li>
+  );
+}
+
+// ─────────────────── Sidebar ───────────────────
+
+function PessoaLinha({
+  rotulo,
+  nome,
+  apagado,
+}: {
+  rotulo: string;
+  nome: string;
+  apagado?: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <span
+        className={cn(
+          'flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
+          apagado
+            ? 'border border-dashed border-[#2a2a2a] text-mute'
+            : 'bg-primary/15 text-primary',
+        )}
+      >
+        {apagado ? '?' : iniciaisDe(nome)}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-mute">
+          {rotulo}
         </p>
-        <p className="mt-1 text-sm text-body">{h.descricao}</p>
-        <p className="mt-1 flex items-center gap-2 text-xs text-mute">
-          {h.autorNome && (
-            <>
-              <UserIcon className="h-3 w-3" />
-              {h.autorNome} ·
-            </>
-          )}
-          <span>{formatarDataHora(h.criadoEm)}</span>
+        <p className={cn('text-sm', apagado ? 'text-mute' : 'font-medium text-ink')}>
+          {nome}
         </p>
       </div>
+    </div>
+  );
+}
+
+function DataLinha({
+  icon: Icon,
+  rotulo,
+  valor,
+  destaque,
+}: {
+  icon: React.ElementType;
+  rotulo: string;
+  valor: string;
+  destaque?: 'emerald';
+}) {
+  return (
+    <div className="flex items-center gap-2 text-xs text-mute">
+      <Icon className={cn('h-3.5 w-3.5', destaque === 'emerald' ? 'text-emerald-400' : 'text-mute')} />
+      <span>{rotulo}:</span>
+      <span className={cn(destaque === 'emerald' ? 'text-emerald-300' : 'text-body')}>
+        {valor}
+      </span>
     </div>
   );
 }
