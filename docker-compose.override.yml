@@ -24,6 +24,12 @@ services:
   frontend:
     build:
       target: dev
+    # Não mountamos `/app` inteiro — apenas paths específicos. Assim
+    # `/app/node_modules` permanece o da imagem. Quando `package*.json`
+    # muda no host, o `COPY package*.json` no Dockerfile invalida o cache
+    # do `npm install`, a próxima `up --build` reinstala tudo, e
+    # automaticamente o container ganha as deps novas. Sem volume anônimo
+    # = sem deps presas entre rebuilds.
     volumes:
       - ./frontend/src:/app/src
       - ./frontend/public:/app/public
@@ -33,8 +39,8 @@ services:
       - ./frontend/tailwind.config.js:/app/tailwind.config.js
       - ./frontend/postcss.config.js:/app/postcss.config.js
       - ./frontend/components.json:/app/components.json
-      # node_modules anônimo: preserva o instalado no container, ignora o do host
-      - /app/node_modules
+      - ./frontend/package.json:/app/package.json
+      - ./frontend/package-lock.json:/app/package-lock.json
     environment:
       CHOKIDAR_USEPOLLING: "true"
       WATCHPACK_POLLING: "true"
