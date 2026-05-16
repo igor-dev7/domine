@@ -1,12 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   AlertCircle,
   Bell,
   CheckCheck,
   CheckCircle2,
-  Clock,
+  Loader2,
   MessageSquare,
-  ShieldAlert,
   Ticket,
   UserPlus,
 } from 'lucide-react';
@@ -18,108 +17,52 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { formatarDataHora } from '@/lib/format';
+import {
+  useMarcarLida,
+  useMarcarTodasLidas,
+  useNotificacoes,
+  type NotificacaoResponse,
+  type TipoNotificacao,
+} from '@/lib/notificacoes';
 import { cn } from '@/lib/utils';
 
-type TipoNotificacao =
-  | 'sla'
-  | 'novo_chamado'
-  | 'comentario'
-  | 'resolvido'
-  | 'atribuicao'
-  | 'novo_usuario'
-  | 'seguranca';
-
-interface Notificacao {
-  id: number;
-  tipo: TipoNotificacao;
-  titulo: string;
-  descricao: string;
-  lida: boolean;
-  criadoEm: string;
-}
-
 const ICON_TIPO: Record<TipoNotificacao, typeof AlertCircle> = {
-  sla: AlertCircle,
-  novo_chamado: Ticket,
-  comentario: MessageSquare,
-  resolvido: CheckCircle2,
-  atribuicao: Clock,
-  novo_usuario: UserPlus,
-  seguranca: ShieldAlert,
+  NOVO_CHAMADO: Ticket,
+  ATRIBUICAO: UserPlus,
+  COMENTARIO: MessageSquare,
+  RESOLVIDO: CheckCircle2,
+  SLA: AlertCircle,
 };
 
 const COR_TIPO: Record<TipoNotificacao, string> = {
-  sla: 'text-red-300 bg-destructive/15 border-destructive/40',
-  novo_chamado: 'text-blue-300 bg-blue-500/10 border-blue-500/40',
-  comentario: 'text-amber-300 bg-amber-500/10 border-amber-500/40',
-  resolvido: 'text-emerald-300 bg-emerald-500/10 border-emerald-500/40',
-  atribuicao: 'text-orange-300 bg-orange-500/10 border-orange-500/40',
-  novo_usuario: 'text-primary bg-primary/10 border-primary/40',
-  seguranca: 'text-red-300 bg-destructive/20 border-destructive/50',
+  NOVO_CHAMADO: 'text-blue-300 bg-blue-500/10 border-blue-500/40',
+  ATRIBUICAO: 'text-orange-300 bg-orange-500/10 border-orange-500/40',
+  COMENTARIO: 'text-amber-300 bg-amber-500/10 border-amber-500/40',
+  RESOLVIDO: 'text-emerald-300 bg-emerald-500/10 border-emerald-500/40',
+  SLA: 'text-red-300 bg-destructive/15 border-destructive/40',
 };
 
-const INICIAL: Notificacao[] = [
-  {
-    id: 1,
-    tipo: 'sla',
-    titulo: 'SLA do chamado #38 prestes a vencer',
-    descricao: 'Faltam 32 minutos pro prazo. Prioridade ALTA.',
-    lida: false,
-    criadoEm: '2026-05-15T19:18:42',
-  },
-  {
-    id: 2,
-    tipo: 'novo_chamado',
-    titulo: '3 novos chamados aguardando triagem',
-    descricao: 'Marina, Carlos e João abriram chamados.',
-    lida: false,
-    criadoEm: '2026-05-15T19:02:11',
-  },
-  {
-    id: 3,
-    tipo: 'seguranca',
-    titulo: '5 tentativas de login falhadas',
-    descricao: 'IP externo tentou autenticar como admin.',
-    lida: false,
-    criadoEm: '2026-05-15T15:48:22',
-  },
-  {
-    id: 4,
-    tipo: 'atribuicao',
-    titulo: 'Chamado #42 atribuído a você',
-    descricao: 'Marina Silva — "Notebook não conecta no Wi-Fi".',
-    lida: true,
-    criadoEm: '2026-05-15T18:55:34',
-  },
-  {
-    id: 5,
-    tipo: 'comentario',
-    titulo: 'Novo comentário no chamado #36',
-    descricao: 'Carla: "Firmware atualizado com sucesso."',
-    lida: true,
-    criadoEm: '2026-05-15T14:10:18',
-  },
-  {
-    id: 6,
-    tipo: 'resolvido',
-    titulo: 'Chamado #34 resolvido',
-    descricao: 'Bruno marcou como RESOLVIDO.',
-    lida: true,
-    criadoEm: '2026-05-15T11:24:09',
-  },
-];
-
 export function NotificacoesDropdown() {
-  const [lista, setLista] = useState<Notificacao[]>(INICIAL);
-  const naoLidas = useMemo(() => lista.filter((n) => !n.lida).length, [lista]);
+  const navigate = useNavigate();
+  const { data, isLoading } = useNotificacoes();
+  const marcarLida = useMarcarLida();
+  const marcarTodas = useMarcarTodasLidas();
 
-  function marcarTodasComoLidas() {
-    setLista((atual) => atual.map((n) => ({ ...n, lida: true })));
-    toast.success('Todas as notificações foram marcadas como lidas.');
+  const itens = data?.itens ?? [];
+  const naoLidas = data?.naoLidas ?? 0;
+
+  function abrirNotificacao(n: NotificacaoResponse) {
+    if (!n.lida) marcarLida.mutate(n.id);
+    if (n.chamadoId != null) {
+      navigate(`/chamados/${n.chamadoId}`);
+    }
   }
 
-  function marcarComoLida(id: number) {
-    setLista((atual) => atual.map((n) => (n.id === id ? { ...n, lida: true } : n)));
+  function handleMarcarTodas() {
+    marcarTodas.mutate(undefined, {
+      onSuccess: () => toast.success('Todas as notificações foram marcadas como lidas.'),
+      onError: () => toast.error('Não foi possível marcar como lidas.'),
+    });
   }
 
   return (
@@ -152,8 +95,9 @@ export function NotificacoesDropdown() {
           {naoLidas > 0 && (
             <button
               type="button"
-              onClick={marcarTodasComoLidas}
-              className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
+              onClick={handleMarcarTodas}
+              disabled={marcarTodas.isPending}
+              className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/10 disabled:opacity-50"
             >
               <CheckCheck className="h-3 w-3" />
               Marcar todas
@@ -164,17 +108,21 @@ export function NotificacoesDropdown() {
         <div className="mx-1.5 h-px bg-[#3a3a3a]" />
 
         <div className="max-h-[420px] overflow-y-auto p-1.5">
-          {lista.length === 0 ? (
+          {isLoading ? (
+            <div className="flex items-center justify-center gap-2 px-4 py-12 text-sm text-mute">
+              <Loader2 className="h-4 w-4 animate-spin" /> Carregando…
+            </div>
+          ) : itens.length === 0 ? (
             <p className="px-4 py-12 text-center text-sm text-mute">Sem notificações.</p>
           ) : (
             <ul className="flex flex-col gap-1">
-              {lista.map((notif) => {
+              {itens.map((notif) => {
                 const Icon = ICON_TIPO[notif.tipo];
                 return (
                   <li key={notif.id}>
                     <button
                       type="button"
-                      onClick={() => marcarComoLida(notif.id)}
+                      onClick={() => abrirNotificacao(notif)}
                       className={cn(
                         'group flex w-full items-start gap-3 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-[#3a3a3a]',
                         !notif.lida && 'bg-[#333333]',
@@ -202,7 +150,9 @@ export function NotificacoesDropdown() {
                             <span className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-primary" />
                           )}
                         </div>
-                        <p className="mt-1 text-xs text-mute">{notif.descricao}</p>
+                        {notif.descricao && (
+                          <p className="mt-1 text-xs text-mute">{notif.descricao}</p>
+                        )}
                         <p className="mt-1 text-[10px] uppercase tracking-wider text-mute/70">
                           {formatarDataHora(notif.criadoEm)}
                         </p>

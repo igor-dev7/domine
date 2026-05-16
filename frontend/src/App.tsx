@@ -1,5 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
-import { LifeBuoy, Settings } from 'lucide-react';
+import { LifeBuoy } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { PrivateRoute } from '@/components/PrivateRoute';
 import { AdminRoute } from '@/components/AdminRoute';
@@ -48,16 +48,6 @@ export default function App() {
               <Route path="/relatorios" element={<Relatorios />} />
               <Route path="/auditoria" element={<Auditoria />} />
               <Route path="/base-conhecimento" element={<BaseConhecimento />} />
-              <Route
-                path="/configuracoes"
-                element={
-                  <EmConstrucao
-                    titulo="Configurações"
-                    descricao="Preferências do sistema, integrações, políticas, categorias customizáveis."
-                    icone={Settings}
-                  />
-                }
-              />
               <Route
                 path="/suporte"
                 element={

@@ -27,7 +27,7 @@ public class JwtService {
         this.expirationMs = expirationMs;
     }
 
-    public String generateToken(Usuario usuario) {
+    public String generateToken(Usuario usuario, String jti) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", usuario.getId());
         claims.put("perfil", usuario.getPerfil().name());
@@ -37,6 +37,7 @@ public class JwtService {
 
         return Jwts.builder()
                 .claims(claims)
+                .id(jti)
                 .subject(usuario.getEmail())
                 .issuedAt(now)
                 .expiration(expiry)
@@ -46,6 +47,10 @@ public class JwtService {
 
     public String extractEmail(String token) {
         return extractAllClaims(token).getSubject();
+    }
+
+    public String extractJti(String token) {
+        return extractAllClaims(token).getId();
     }
 
     public boolean isTokenValid(String token, String email) {

@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSettingsModal } from '@/contexts/SettingsModalContext';
 import { Logo } from '@/components/Logo';
 import {
   DropdownMenu,
@@ -112,6 +113,7 @@ const gruposAdmin: GrupoSidebar[] = [
 
 export function Sidebar() {
   const { usuario, logout } = useAuth();
+  const { abrir: abrirSettings } = useSettingsModal();
   const [colapsada, setColapsada] = useState(false);
   const isAdmin = usuario?.perfil === 'ADMIN';
 
@@ -181,6 +183,7 @@ export function Sidebar() {
         usuario={usuario}
         onLogout={logout}
         nextDelay={next}
+        onAbrirSettings={abrirSettings}
       />
     </aside>
   );
@@ -261,11 +264,13 @@ function FooterSidebar({
   usuario,
   onLogout,
   nextDelay,
+  onAbrirSettings,
 }: {
   colapsada: boolean;
   usuario: { nome: string; email: string; perfil: string } | null;
   onLogout: () => void;
   nextDelay: () => number;
+  onAbrirSettings: (secao?: import('@/components/settings/UserSettingsSidebar').UserSettingsSection) => void;
 }) {
   if (!usuario) return null;
   const iniciais = iniciaisDe(usuario.nome);
@@ -280,9 +285,9 @@ function FooterSidebar({
       <AcaoFooter
         icon={Settings}
         label="Configurações"
-        to="/configuracoes"
         colapsada={colapsada}
         delay={dConfig}
+        onClick={() => onAbrirSettings('profile')}
       />
       <AcaoFooter
         icon={LifeBuoy}
@@ -337,15 +342,15 @@ function FooterSidebar({
             </DropdownMenuSubTrigger>
             <DropdownMenuPortal>
               <DropdownMenuSubContent>
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onAbrirSettings('profile')}>
                   <UserIcon />
                   Ver perfil
                 </DropdownMenuItem>
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onAbrirSettings('profile')}>
                   <Pencil />
                   Editar dados
                 </DropdownMenuItem>
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onAbrirSettings('security')}>
                   <KeyRound />
                   Trocar senha
                 </DropdownMenuItem>
@@ -371,42 +376,70 @@ function AcaoFooter({
   icon: Icon,
   label,
   to,
+  onClick,
   colapsada,
   delay,
 }: {
   icon: typeof Settings;
   label: string;
-  to: string;
+  to?: string;
+  onClick?: () => void;
   colapsada: boolean;
   delay: number;
 }) {
+  const baseClasses = cn(
+    'animate-element flex w-full items-center gap-3 rounded-md py-2 text-sm font-medium text-body transition-all duration-500 ease-in-out hover:bg-[#161616] hover:text-ink',
+    colapsada ? 'justify-center px-2' : 'px-3',
+  );
+
+  const conteudo = (
+    <>
+      <Icon size={16} className="shrink-0" />
+      <span
+        className={cn(
+          'truncate whitespace-nowrap transition-all duration-500 ease-in-out',
+          colapsada ? 'w-0 opacity-0' : 'flex-1 text-left opacity-100',
+        )}
+      >
+        {label}
+      </span>
+    </>
+  );
+
+  if (to) {
+    return (
+      <HoverHint active={colapsada} label={label}>
+        <NavLink
+          to={to}
+          style={{ animationDelay: `${delay}ms` }}
+          className={({ isActive }) =>
+            cn(
+              'animate-element flex w-full items-center gap-3 rounded-md py-2 text-sm font-medium transition-all duration-500 ease-in-out',
+              colapsada ? 'justify-center px-2' : 'px-3',
+              isActive
+                ? colapsada
+                  ? 'text-primary'
+                  : "relative bg-gradient-to-r from-primary/20 via-transparent to-transparent text-ink before:absolute before:inset-y-1.5 before:left-0 before:w-0.5 before:rounded-full before:bg-primary before:content-['']"
+                : 'text-body hover:bg-[#161616] hover:text-ink',
+            )
+          }
+        >
+          {conteudo}
+        </NavLink>
+      </HoverHint>
+    );
+  }
+
   return (
     <HoverHint active={colapsada} label={label}>
-      <NavLink
-        to={to}
+      <button
+        type="button"
+        onClick={onClick}
         style={{ animationDelay: `${delay}ms` }}
-        className={({ isActive }) =>
-          cn(
-            'animate-element flex w-full items-center gap-3 rounded-md py-2 text-sm font-medium transition-all duration-500 ease-in-out',
-            colapsada ? 'justify-center px-2' : 'px-3',
-            isActive
-              ? colapsada
-                ? 'text-primary'
-                : "relative bg-gradient-to-r from-primary/20 via-transparent to-transparent text-ink before:absolute before:inset-y-1.5 before:left-0 before:w-0.5 before:rounded-full before:bg-primary before:content-['']"
-              : 'text-body hover:bg-[#161616] hover:text-ink',
-          )
-        }
+        className={baseClasses}
       >
-        <Icon size={16} className="shrink-0" />
-        <span
-          className={cn(
-            'truncate whitespace-nowrap transition-all duration-500 ease-in-out',
-            colapsada ? 'w-0 opacity-0' : 'flex-1 opacity-100',
-          )}
-        >
-          {label}
-        </span>
-      </NavLink>
+        {conteudo}
+      </button>
     </HoverHint>
   );
 }

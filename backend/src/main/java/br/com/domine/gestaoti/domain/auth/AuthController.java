@@ -4,6 +4,7 @@ import br.com.domine.gestaoti.domain.auth.dto.LoginRequest;
 import br.com.domine.gestaoti.domain.auth.dto.LoginResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,7 +22,17 @@ public class AuthController {
 
     @PostMapping("/login")
     @Operation(summary = "Login do usuário", description = "Recebe email/senha e retorna o token JWT.")
-    public LoginResponse login(@Valid @RequestBody LoginRequest request) {
-        return authService.login(request);
+    public LoginResponse login(@Valid @RequestBody LoginRequest request, HttpServletRequest http) {
+        String userAgent = http.getHeader("User-Agent");
+        String ip = extrairIp(http);
+        return authService.login(request, userAgent, ip);
+    }
+
+    private String extrairIp(HttpServletRequest req) {
+        String fwd = req.getHeader("X-Forwarded-For");
+        if (fwd != null && !fwd.isBlank()) {
+            return fwd.split(",")[0].trim();
+        }
+        return req.getRemoteAddr();
     }
 }

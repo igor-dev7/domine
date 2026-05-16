@@ -8,5 +8,5 @@ import br.com.domine.gestaoti.domain.auth.dto.LoginResponse;
  * Implementação em {@link AuthServiceImpl}.
  */
 public interface AuthService {
-    LoginResponse login(LoginRequest request);
+    LoginResponse login(LoginRequest request, String userAgent, String ipOrigem);
 }

@@ -33,6 +33,8 @@ public interface ChamadoRepository extends JpaRepository<Chamado, Long> {
             Pageable pageable
     );
 
+    List<Chamado> findBySolicitanteIdOrderByCriadoEmDesc(Long solicitanteId);
+
     long countByStatus(StatusChamado status);
 
     long countByStatusAndResolvidoEmAfter(StatusChamado status, LocalDateTime since);

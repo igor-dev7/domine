@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import App from './App';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { SettingsModalProvider } from '@/contexts/SettingsModalContext';
 import './index.css';
 
 const queryClient = new QueryClient({
@@ -19,7 +20,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <AuthProvider>
-            <App />
+            <SettingsModalProvider>
+              <App />
+            </SettingsModalProvider>
           </AuthProvider>
         </BrowserRouter>
       </QueryClientProvider>

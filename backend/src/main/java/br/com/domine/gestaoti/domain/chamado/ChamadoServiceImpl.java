@@ -12,12 +12,15 @@ import br.com.domine.gestaoti.domain.chamado.dto.HistoricoResponse;
 import br.com.domine.gestaoti.domain.chamado.dto.StatusUpdateRequest;
 import br.com.domine.gestaoti.domain.equipamento.Equipamento;
 import br.com.domine.gestaoti.domain.equipamento.EquipamentoRepository;
+import br.com.domine.gestaoti.domain.notificacao.NotificacaoService;
 import br.com.domine.gestaoti.domain.usuario.Usuario;
 import br.com.domine.gestaoti.domain.usuario.UsuarioRepository;
 import br.com.domine.gestaoti.enums.CategoriaChamado;
+import br.com.domine.gestaoti.enums.PerfilUsuario;
 import br.com.domine.gestaoti.enums.PrioridadeChamado;
 import br.com.domine.gestaoti.enums.StatusChamado;
 import br.com.domine.gestaoti.enums.TipoEventoHistorico;
+import br.com.domine.gestaoti.enums.TipoNotificacao;
 import br.com.domine.gestaoti.exception.BusinessException;
 import br.com.domine.gestaoti.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -43,6 +46,7 @@ public class ChamadoServiceImpl implements ChamadoService {
     private final EquipamentoRepository equipamentoRepository;
     private final HistoricoChamadoRepository historicoRepository;
     private final ComentarioRepository comentarioRepository;
+    private final NotificacaoService notificacaoService;
 
     @Override
     @Transactional(readOnly = true)
@@ -80,6 +84,16 @@ public class ChamadoServiceImpl implements ChamadoService {
 
         registrarHistorico(c, me, TipoEventoHistorico.CRIADO,
                 "Chamado aberto por " + me.getNome());
+
+        // NOVO_CHAMADO → notifica todos os admins ativos, exceto o próprio criador.
+        String tituloNotif = "Novo chamado: " + c.getTitulo();
+        String descNotif = me.getNome() + " abriu um chamado de prioridade " + c.getPrioridade() + ".";
+        usuarioRepository.findByPerfilAndAtivoTrue(PerfilUsuario.ADMIN).forEach(admin -> {
+            if (!admin.getId().equals(me.getId())) {
+                notificacaoService.enviar(admin, TipoNotificacao.NOVO_CHAMADO, tituloNotif, descNotif, c.getId());
+            }
+        });
+
         return ChamadoResponse.from(c);
     }
 
@@ -132,6 +146,20 @@ public class ChamadoServiceImpl implements ChamadoService {
 
         registrarHistorico(c, me, TipoEventoHistorico.STATUS_ALTERADO,
                 "Status alterado de " + anterior + " para " + request.status());
+
+        // RESOLVIDO → avisa o solicitante (se não foi ele mesmo).
+        if (request.status() == StatusChamado.RESOLVIDO
+                && c.getSolicitante() != null
+                && !c.getSolicitante().getId().equals(me.getId())) {
+            notificacaoService.enviar(
+                    c.getSolicitante(),
+                    TipoNotificacao.RESOLVIDO,
+                    "Chamado #" + c.getId() + " resolvido",
+                    me.getNome() + " marcou seu chamado como resolvido.",
+                    c.getId()
+            );
+        }
+
         return ChamadoResponse.from(c);
     }
 
@@ -152,6 +180,18 @@ public class ChamadoServiceImpl implements ChamadoService {
 
         registrarHistorico(c, me, TipoEventoHistorico.TECNICO_ATRIBUIDO,
                 "Técnico " + tecnico.getNome() + " atribuído ao chamado");
+
+        // ATRIBUICAO → notifica o técnico (se não atribuiu a si mesmo).
+        if (!tecnico.getId().equals(me.getId())) {
+            notificacaoService.enviar(
+                    tecnico,
+                    TipoNotificacao.ATRIBUICAO,
+                    "Chamado #" + c.getId() + " atribuído a você",
+                    c.getTitulo(),
+                    c.getId()
+            );
+        }
+
         return ChamadoResponse.from(c);
     }
 
@@ -175,7 +215,28 @@ public class ChamadoServiceImpl implements ChamadoService {
 
         registrarHistorico(c, me, TipoEventoHistorico.COMENTARIO_ADICIONADO,
                 me.getNome() + " adicionou um comentário");
+
+        // COMENTARIO → solicitante + técnico responsável, exceto quem comentou.
+        String tituloNotif = "Novo comentário no chamado #" + c.getId();
+        String descNotif = me.getNome() + ": " + recortar(request.texto(), 120);
+        if (c.getSolicitante() != null && !c.getSolicitante().getId().equals(me.getId())) {
+            notificacaoService.enviar(c.getSolicitante(), TipoNotificacao.COMENTARIO,
+                    tituloNotif, descNotif, c.getId());
+        }
+        if (c.getTecnicoResponsavel() != null
+                && !c.getTecnicoResponsavel().getId().equals(me.getId())
+                && (c.getSolicitante() == null
+                || !c.getTecnicoResponsavel().getId().equals(c.getSolicitante().getId()))) {
+            notificacaoService.enviar(c.getTecnicoResponsavel(), TipoNotificacao.COMENTARIO,
+                    tituloNotif, descNotif, c.getId());
+        }
+
         return ComentarioResponse.from(com);
+    }
+
+    private static String recortar(String s, int max) {
+        if (s == null) return "";
+        return s.length() <= max ? s : s.substring(0, max - 1) + "…";
     }
 
     @Override

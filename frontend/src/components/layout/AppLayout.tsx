@@ -1,4 +1,5 @@
 import { Outlet } from 'react-router-dom';
+import { UserSettingsModal } from '@/components/settings/UserSettingsModal';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 
@@ -14,6 +15,7 @@ export function AppLayout() {
           </div>
         </div>
       </main>
+      <UserSettingsModal />
     </div>
   );
 }
