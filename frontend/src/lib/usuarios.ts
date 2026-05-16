@@ -5,6 +5,9 @@ import type { PerfilUsuario, SpringPage, UsuarioResponse } from '@/types';
 export interface UsuarioFiltro {
   page?: number;
   size?: number;
+  nome?: string | null;
+  perfil?: PerfilUsuario | null;
+  ativo?: boolean | null;
 }
 
 export interface UsuarioCreatePayload {
@@ -35,9 +38,14 @@ export function useUsuarios(filtro: UsuarioFiltro = {}) {
   return useQuery({
     queryKey: usuariosKeys.lista(filtro),
     queryFn: async () => {
-      const { data } = await api.get<SpringPage<UsuarioResponse>>('/usuarios', {
-        params: { page: filtro.page ?? 0, size: filtro.size ?? 10 },
-      });
+      const params: Record<string, string | number | boolean> = {
+        page: filtro.page ?? 0,
+        size: filtro.size ?? 10,
+      };
+      if (filtro.nome) params.nome = filtro.nome;
+      if (filtro.perfil) params.perfil = filtro.perfil;
+      if (filtro.ativo != null) params.ativo = filtro.ativo;
+      const { data } = await api.get<SpringPage<UsuarioResponse>>('/usuarios', { params });
       return data;
     },
     placeholderData: (prev) => prev,

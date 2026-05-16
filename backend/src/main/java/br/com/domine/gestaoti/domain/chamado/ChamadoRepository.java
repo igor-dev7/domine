@@ -23,7 +23,7 @@ public interface ChamadoRepository extends JpaRepository<Chamado, Long> {
               AND (:prioridade IS NULL OR c.prioridade = :prioridade)
               AND (:categoria IS NULL OR c.categoria = :categoria)
               AND (:tecnicoId IS NULL OR c.tecnicoResponsavel.id = :tecnicoId)
-              AND (:busca IS NULL
+              AND (:busca = ''
                    OR LOWER(c.titulo) LIKE LOWER(CONCAT('%', :busca, '%'))
                    OR LOWER(c.descricao) LIKE LOWER(CONCAT('%', :busca, '%')))
             ORDER BY c.criadoEm DESC, c.id DESC

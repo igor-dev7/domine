@@ -24,9 +24,8 @@ public class UsuarioServiceImpl implements UsuarioService {
     @Override
     @Transactional(readOnly = true)
     public Page<UsuarioResponse> listar(String nome, PerfilUsuario perfil, Boolean ativo, Pageable pageable) {
-        // Implementação simples — filtros aplicados em memória. Para datasets maiores,
-        // criar query JPQL como nos outros repositories.
-        return usuarioRepository.findAll(pageable).map(UsuarioResponse::from);
+        String busca = (nome == null) ? "" : nome.trim();
+        return usuarioRepository.filtrar(perfil, ativo, busca, pageable).map(UsuarioResponse::from);
     }
 
     @Override

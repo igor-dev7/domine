@@ -38,7 +38,6 @@ export default function App() {
             <Route element={<AdminRoute />}>
               <Route path="/equipamentos" element={<EquipamentosLista />} />
               <Route path="/usuarios" element={<UsuariosLista />} />
-              <Route path="/usuarios/novo" element={<UsuarioForm />} />
               <Route path="/usuarios/:id/editar" element={<UsuarioForm />} />
               <Route path="/relatorios" element={<Relatorios />} />
               <Route path="/auditoria" element={<Auditoria />} />

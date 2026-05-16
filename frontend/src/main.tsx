@@ -9,6 +9,7 @@ import { SettingsModalProvider } from '@/contexts/SettingsModalContext';
 import { NovoChamadoModalProvider } from '@/contexts/NovoChamadoModalContext';
 import { NovoEquipamentoModalProvider } from '@/contexts/NovoEquipamentoModalContext';
 import { EquipamentoSheetProvider } from '@/contexts/EquipamentoSheetContext';
+import { NovoUsuarioModalProvider } from '@/contexts/NovoUsuarioModalContext';
 import './index.css';
 
 const queryClient = new QueryClient({
@@ -27,7 +28,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               <NovoChamadoModalProvider>
                 <NovoEquipamentoModalProvider>
                   <EquipamentoSheetProvider>
-                    <App />
+                    <NovoUsuarioModalProvider>
+                      <App />
+                    </NovoUsuarioModalProvider>
                   </EquipamentoSheetProvider>
                 </NovoEquipamentoModalProvider>
               </NovoChamadoModalProvider>

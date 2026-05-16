@@ -55,7 +55,7 @@ public class ChamadoServiceImpl implements ChamadoService {
                                          Pageable pageable) {
         Usuario me = SecurityUtils.usuarioAtual();
         Long solicitanteId = me.isAdmin() ? null : me.getId();
-        String buscaSan = (busca == null || busca.isBlank()) ? null : busca.trim();
+        String buscaSan = (busca == null) ? "" : busca.trim();
         return chamadoRepository.filtrar(solicitanteId, status, prioridade, categoria, tecnicoId, buscaSan, pageable)
                 .map(ChamadoResponse::resumo);
     }
