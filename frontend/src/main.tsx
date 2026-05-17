@@ -11,6 +11,8 @@ import { NovoEquipamentoModalProvider } from '@/contexts/NovoEquipamentoModalCon
 import { EquipamentoSheetProvider } from '@/contexts/EquipamentoSheetContext';
 import { NovoUsuarioModalProvider } from '@/contexts/NovoUsuarioModalContext';
 import { EditarUsuarioModalProvider } from '@/contexts/EditarUsuarioModalContext';
+import { ArtigoFormModalProvider } from '@/contexts/ArtigoFormModalContext';
+import { ArtigoDetalheModalProvider } from '@/contexts/ArtigoDetalheModalContext';
 import './index.css';
 
 const queryClient = new QueryClient({
@@ -31,7 +33,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                   <EquipamentoSheetProvider>
                     <NovoUsuarioModalProvider>
                       <EditarUsuarioModalProvider>
-                        <App />
+                        <ArtigoFormModalProvider>
+                          <ArtigoDetalheModalProvider>
+                            <App />
+                          </ArtigoDetalheModalProvider>
+                        </ArtigoFormModalProvider>
                       </EditarUsuarioModalProvider>
                     </NovoUsuarioModalProvider>
                   </EquipamentoSheetProvider>

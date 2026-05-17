@@ -1,25 +1,21 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ElementType } from 'react';
 import { Link } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNovoChamadoModal } from '@/contexts/NovoChamadoModalContext';
-import {
-  Cell,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-} from 'recharts';
 import {
   AlertCircle,
   ArrowRight,
   CheckCircle2,
   Clock,
   HardDrive,
+  Layers,
   Lock,
   Mail,
+  Monitor,
   Plus,
   Printer,
   Shapes,
+  Smartphone,
   Ticket,
   Wifi,
   Wrench,
@@ -33,18 +29,20 @@ import { StatusBadge } from '@/components/StatusBadge';
 import { PrioridadeBadge } from '@/components/PrioridadeBadge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useChamados, useDashboard } from '@/lib/chamados';
+import { useEquipamentosLista } from '@/lib/equipamentos';
+import { fotoDoEquipamento } from '@/lib/fotoEquipamento';
 import {
   categoriaChamadoLabel,
   formatarDataHora,
   iniciaisDe,
-  prioridadeChamadoLabel,
+  tipoEquipamentoLabel,
 } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type {
   CategoriaChamado,
   ChamadoResponse,
-  PrioridadeChamado,
   StatusChamado,
+  TipoEquipamento,
 } from '@/types';
 
 export function Dashboard() {
@@ -141,14 +139,11 @@ function DashboardAdmin() {
         variants={stagger.innerContainer}
         className="grid gap-4 lg:grid-cols-2"
       >
-        <PrioridadePie
-          dados={dashboard?.porPrioridade}
-          carregando={isLoading}
-        />
         <TopCategorias
           dados={dashboard?.porCategoria}
           carregando={isLoading}
         />
+        <TopEquipamentos />
       </motion.div>
 
       <ChamadosTabela
@@ -290,113 +285,277 @@ function KpiCard({
   );
 }
 
-// ───────────────────────────── Pie Chart ─────────────────────────────
+// ─────────────────────── Top Ranking (genérico) ───────────────────────
 
-const PRIORIDADE_ORDEM: PrioridadeChamado[] = ['CRITICA', 'ALTA', 'MEDIA', 'BAIXA'];
+interface TopItem {
+  chave: string;
+  label: string;
+  sublabel?: string;
+  qtd: number;
+  leading: React.ReactNode;
+  // Avatar pequeno (24-32px) usado na pilha do card expansível.
+  mini?: React.ReactNode;
+}
 
-const COR_PRIORIDADE: Record<PrioridadeChamado, string> = {
-  CRITICA: '#f87171', // red-400
-  ALTA: '#fb923c', // orange-400
-  MEDIA: '#60a5fa', // blue-400
-  BAIXA: '#3b82f6', // primary
-};
+interface ExpansivelProps {
+  expansivel: true;
+  iconeAgrupador: ElementType;
+  labelAgrupador: string;
+  unidadeAgrupadorSingular: string;
+  unidadeAgrupadorPlural: string;
+}
 
-function PrioridadePie({
-  dados,
-  carregando,
-}: {
-  dados: Record<string, number> | undefined;
+interface NaoExpansivelProps {
+  expansivel?: false;
+}
+
+type TopRankingProps = {
+  titulo: string;
+  subtitulo: string;
+  todas: TopItem[];
+  unidadeSingular: string;
+  unidadePlural: string;
   carregando?: boolean;
-}) {
-  const data = useMemo(() => {
-    if (!dados) return [];
-    return PRIORIDADE_ORDEM.map((p) => ({
-      name: prioridadeChamadoLabel[p],
-      value: dados[p] ?? 0,
-      cor: COR_PRIORIDADE[p],
-      prioridade: p,
-    })).filter((d) => d.value > 0);
-  }, [dados]);
+} & (ExpansivelProps | NaoExpansivelProps);
 
-  const total = data.reduce((acc, d) => acc + d.value, 0);
+function TopRanking(props: TopRankingProps) {
+  const { titulo, subtitulo, todas, unidadeSingular, unidadePlural, carregando } = props;
+  const expansivel = props.expansivel === true;
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const max = todas.reduce((acc, i) => Math.max(acc, i.qtd), 0);
+  const visiveis = expansivel ? todas.slice(0, 4) : todas;
+  const restantes = expansivel ? todas.length - visiveis.length : 0;
 
   return (
-    <motion.div variants={stagger.item} className="rounded-3xl bg-[#1a1a1a] p-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <h3 className="text-base font-semibold text-ink">Por prioridade</h3>
-          <p className="mt-1 text-xs text-mute">Distribuição atual dos chamados.</p>
-        </div>
+    <motion.div
+      variants={stagger.item}
+      className={cn(
+        'relative flex flex-col overflow-hidden rounded-3xl bg-[#1a1a1a] p-6',
+        expansivel && 'min-h-[440px]',
+      )}
+    >
+      <div>
+        <h3 className="text-base font-semibold text-ink">{titulo}</h3>
+        <p className="mt-1 text-xs text-mute">{subtitulo}</p>
       </div>
 
       {carregando ? (
         <div className="mt-6">
-          <SkeletonLinhas linhas={4} />
+          <SkeletonLinhas linhas={5} />
         </div>
-      ) : data.length === 0 ? (
+      ) : todas.length === 0 ? (
         <p className="mt-6 text-sm text-mute">Sem dados.</p>
       ) : (
-        <div className="mt-2 grid grid-cols-1 items-center gap-4 sm:grid-cols-[200px_1fr]">
-          <div className="relative h-[200px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={data}
-                  dataKey="value"
-                  nameKey="name"
-                  innerRadius={60}
-                  outerRadius={90}
-                  paddingAngle={3}
-                  strokeWidth={0}
-                  animationDuration={700}
-                  animationBegin={150}
-                >
-                  {data.map((d) => (
-                    <Cell key={d.prioridade} fill={d.cor} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  cursor={false}
-                  contentStyle={{
-                    background: '#2a2a2a',
-                    border: 'none',
-                    borderRadius: 12,
-                    fontSize: 12,
-                    boxShadow: '0 10px 30px rgba(0,0,0,.4)',
-                  }}
-                  itemStyle={{ color: '#e5e5e5' }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-              <p className="text-3xl font-bold text-ink-strong tabular-nums">{total}</p>
-              <p className="text-[10px] uppercase tracking-wider text-mute">chamados</p>
-            </div>
-          </div>
-          <ul className="space-y-3">
-            {data.map((d) => {
-              const pct = total > 0 ? Math.round((d.value / total) * 100) : 0;
-              return (
-                <li key={d.prioridade} className="flex items-center gap-3 text-sm">
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: d.cor }} />
-                  <span className="flex-1 text-body">{d.name}</span>
-                  <span className="tabular-nums text-mute">{pct}%</span>
-                  <span className="w-8 text-right font-semibold text-ink tabular-nums">
-                    {d.value}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
+        <motion.ul
+          initial="hidden"
+          animate="visible"
+          variants={{ visible: { transition: { staggerChildren: 0.05 } } }}
+          className={cn(
+            'mt-4 space-y-1',
+            expansivel && 'pb-24',
+            '[&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-mute/30 [&::-webkit-scrollbar-track]:bg-transparent',
+          )}
+        >
+          {visiveis.map((item) => (
+            <RankingItem
+              key={item.chave}
+              item={item}
+              max={max}
+              unidadeSingular={unidadeSingular}
+              unidadePlural={unidadePlural}
+            />
+          ))}
+        </motion.ul>
+      )}
+
+      {expansivel && todas.length > 0 && (
+        <CardAgrupador
+          {...(props as ExpansivelProps)}
+          todas={todas}
+          max={max}
+          isExpanded={isExpanded}
+          setIsExpanded={setIsExpanded}
+          unidadeSingular={unidadeSingular}
+          unidadePlural={unidadePlural}
+          restantes={restantes}
+        />
       )}
     </motion.div>
   );
 }
 
-// ─────────────────────────── Top Categorias ───────────────────────────
+function CardAgrupador({
+  iconeAgrupador,
+  labelAgrupador,
+  unidadeAgrupadorSingular,
+  unidadeAgrupadorPlural,
+  todas,
+  max,
+  isExpanded,
+  setIsExpanded,
+  unidadeSingular,
+  unidadePlural,
+  restantes,
+}: ExpansivelProps & {
+  todas: TopItem[];
+  max: number;
+  isExpanded: boolean;
+  setIsExpanded: (fn: (v: boolean) => boolean) => void;
+  unidadeSingular: string;
+  unidadePlural: string;
+  restantes: number;
+}) {
+  const IconeAgrupador = iconeAgrupador;
+  return (
+    <motion.div
+      layout
+      initial={false}
+      animate={{
+        height: isExpanded ? 'calc(100% - 20px)' : '68px',
+        width: isExpanded ? 'calc(100% - 20px)' : 'calc(100% - 40px)',
+        bottom: isExpanded ? '10px' : '20px',
+        left: isExpanded ? '10px' : '20px',
+        borderRadius: isExpanded ? 20 : 24,
+      }}
+      transition={{ type: 'spring', stiffness: 240, damping: 30, mass: 0.8 }}
+      className="absolute z-10 flex flex-col overflow-hidden border border-[#2a2a2a] bg-[#131313] shadow-2xl shadow-black/40"
+    >
+      <button
+        type="button"
+        onClick={() => setIsExpanded((v) => !v)}
+        className={cn(
+          'group/bar flex h-[68px] shrink-0 items-center justify-between px-3 text-left transition-colors',
+          isExpanded ? 'border-b border-[#2a2a2a]' : 'hover:bg-[#1a1a1a]',
+        )}
+      >
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary transition-transform group-hover/bar:scale-105">
+            <IconeAgrupador className="h-5 w-5" />
+          </div>
+          <motion.div layout="position">
+            <h4 className="text-sm font-semibold text-ink">{labelAgrupador}</h4>
+            <p className="text-xs text-mute">
+              {todas.length}{' '}
+              {todas.length === 1 ? unidadeAgrupadorSingular : unidadeAgrupadorPlural}
+            </p>
+          </motion.div>
+        </div>
 
-const ICONE_CATEGORIA: Record<CategoriaChamado, React.ElementType> = {
+        <div className="flex items-center gap-3">
+          {!isExpanded && (
+            <div className="flex -space-x-2">
+              {todas.slice(0, 3).map((c) => (
+                <span
+                  key={c.chave}
+                  className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-[#1a1a1a] ring-2 ring-[#131313]"
+                >
+                  {c.mini ?? c.leading}
+                </span>
+              ))}
+              {restantes > 0 && (
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#2a2a2a] text-xs font-semibold text-mute ring-2 ring-[#131313]">
+                  +{restantes}
+                </span>
+              )}
+            </div>
+          )}
+
+          {isExpanded && (
+            <span
+              aria-hidden
+              className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#2a2a2a] text-mute transition-transform group-hover/bar:scale-105"
+            >
+              <X className="h-4 w-4" />
+            </span>
+          )}
+        </div>
+      </button>
+
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
+            variants={{
+              visible: { transition: { staggerChildren: 0.04, delayChildren: 0.1 } },
+              hidden: { transition: { staggerChildren: 0.02, staggerDirection: -1 } },
+            }}
+            className="flex-1 space-y-1 overflow-y-auto px-3 py-3 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-mute/30 [&::-webkit-scrollbar-track]:bg-transparent"
+          >
+            {todas.map((item) => (
+              <RankingItem
+                key={`exp-${item.chave}`}
+                item={item}
+                max={max}
+                unidadeSingular={unidadeSingular}
+                unidadePlural={unidadePlural}
+              />
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
+function RankingItem({
+  item,
+  max,
+  unidadeSingular,
+  unidadePlural,
+}: {
+  item: TopItem;
+  max: number;
+  unidadeSingular: string;
+  unidadePlural: string;
+}) {
+  const pct = max > 0 ? (item.qtd / max) * 100 : 0;
+  return (
+    <motion.div
+      variants={{
+        hidden: { opacity: 0, x: 8, y: 8 },
+        visible: { opacity: 1, x: 0, y: 0 },
+      }}
+      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+      className="flex items-center gap-4 rounded-2xl px-3 py-2.5 transition-colors hover:bg-[#131313]"
+    >
+      {item.leading}
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline justify-between gap-2">
+          <p className="truncate text-sm font-semibold text-ink">{item.label}</p>
+          <p className="text-xs tabular-nums text-mute">
+            {item.qtd} {item.qtd === 1 ? unidadeSingular : unidadePlural}
+          </p>
+        </div>
+        {item.sublabel && (
+          <p className="truncate text-xs text-mute">{item.sublabel}</p>
+        )}
+        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#2a2a2a]">
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${pct}%` }}
+            transition={{ duration: 0.7, delay: 0.1, ease: [0.4, 0, 0.2, 1] }}
+            className="h-full rounded-full bg-gradient-to-r from-primary to-primary-soft"
+          />
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function LeadingIcone({ Icone }: { Icone: ElementType }) {
+  return (
+    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+      <Icone className="h-5 w-5" />
+    </div>
+  );
+}
+
+// ─────────────────────── Top Categorias (chamados) ───────────────────────
+
+const ICONE_CATEGORIA: Record<CategoriaChamado, ElementType> = {
   HARDWARE: HardDrive,
   SOFTWARE: Shapes,
   REDE: Wifi,
@@ -413,188 +572,121 @@ function TopCategorias({
   dados: Record<string, number> | undefined;
   carregando?: boolean;
 }) {
-  const [isExpanded, setIsExpanded] = useState(false);
-
-  const todas = useMemo(() => {
+  const todas = useMemo<TopItem[]>(() => {
     if (!dados) return [];
     return Object.entries(dados)
-      .map(([categoria, qtd]) => ({
-        categoria: categoria as CategoriaChamado,
-        label: categoriaChamadoLabel[categoria as CategoriaChamado] ?? categoria,
-        qtd,
-      }))
+      .map(([categoria, qtd]) => {
+        const c = categoria as CategoriaChamado;
+        const Icone = ICONE_CATEGORIA[c] ?? Shapes;
+        return {
+          chave: c,
+          label: categoriaChamadoLabel[c] ?? categoria,
+          qtd,
+          leading: <LeadingIcone Icone={Icone} />,
+        };
+      })
       .filter((i) => i.qtd > 0)
       .sort((a, b) => b.qtd - a.qtd);
   }, [dados]);
 
-  const topo = todas.slice(0, 4);
-  const restantes = todas.length - topo.length;
-  const max = todas.reduce((acc, i) => Math.max(acc, i.qtd), 0);
-
   return (
-    <motion.div
-      variants={stagger.item}
-      className="relative min-h-[440px] overflow-hidden rounded-3xl bg-[#1a1a1a] p-6"
-    >
-      <div className="flex items-start justify-between">
-        <div>
-          <h3 className="text-base font-semibold text-ink">Top categorias</h3>
-          <p className="mt-1 text-xs text-mute">
-            As categorias com mais chamados ativos.
-          </p>
-        </div>
-      </div>
-
-      {carregando ? (
-        <div className="mt-6">
-          <SkeletonLinhas linhas={5} />
-        </div>
-      ) : todas.length === 0 ? (
-        <p className="mt-6 text-sm text-mute">Sem dados.</p>
-      ) : (
-        <motion.ul
-          initial="hidden"
-          animate="visible"
-          variants={{ visible: { transition: { staggerChildren: 0.05 } } }}
-          className="mt-4 space-y-1 pb-24"
-        >
-          {topo.map((item) => (
-            <CategoriaItem key={item.categoria} item={item} max={max} />
-          ))}
-        </motion.ul>
-      )}
-
-      {todas.length > 0 && (
-        <motion.div
-          layout
-          initial={false}
-          animate={{
-            height: isExpanded ? 'calc(100% - 20px)' : '68px',
-            width: isExpanded ? 'calc(100% - 20px)' : 'calc(100% - 40px)',
-            bottom: isExpanded ? '10px' : '20px',
-            left: isExpanded ? '10px' : '20px',
-            borderRadius: isExpanded ? 20 : 24,
-          }}
-          transition={{ type: 'spring', stiffness: 240, damping: 30, mass: 0.8 }}
-          className="absolute z-10 flex flex-col overflow-hidden border border-[#2a2a2a] bg-[#131313] shadow-2xl shadow-black/40"
-        >
-          <button
-            type="button"
-            onClick={() => setIsExpanded((v) => !v)}
-            className={cn(
-              'group/bar flex h-[68px] shrink-0 items-center justify-between px-3 text-left transition-colors',
-              isExpanded ? 'border-b border-[#2a2a2a]' : 'hover:bg-[#1a1a1a]',
-            )}
-          >
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary transition-transform group-hover/bar:scale-105">
-                <Shapes className="h-5 w-5" />
-              </div>
-              <motion.div layout="position">
-                <h4 className="text-sm font-semibold text-ink">Todas as categorias</h4>
-                <p className="text-xs text-mute">
-                  {todas.length} {todas.length === 1 ? 'categoria com chamados' : 'categorias com chamados'}
-                </p>
-              </motion.div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              {!isExpanded && (
-                <div className="flex items-center gap-2">
-                  <div className="flex -space-x-2">
-                    {todas.slice(0, 3).map((c) => {
-                      const Icone = ICONE_CATEGORIA[c.categoria] ?? Shapes;
-                      return (
-                        <span
-                          key={c.categoria}
-                          className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-on-primary ring-2 ring-[#131313]"
-                        >
-                          <Icone className="h-3.5 w-3.5" />
-                        </span>
-                      );
-                    })}
-                    {restantes > 0 && (
-                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#2a2a2a] text-xs font-semibold text-mute ring-2 ring-[#131313]">
-                        +{restantes}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {isExpanded && (
-                <span
-                  aria-hidden
-                  className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#2a2a2a] text-mute transition-transform group-hover/bar:scale-105"
-                >
-                  <X className="h-4 w-4" />
-                </span>
-              )}
-            </div>
-          </button>
-
-          <AnimatePresence>
-            {isExpanded && (
-              <motion.div
-                initial="hidden"
-                animate="visible"
-                exit="hidden"
-                variants={{
-                  visible: { transition: { staggerChildren: 0.04, delayChildren: 0.1 } },
-                  hidden: { transition: { staggerChildren: 0.02, staggerDirection: -1 } },
-                }}
-                className="flex-1 space-y-1 overflow-y-auto px-3 py-3 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-mute/30 [&::-webkit-scrollbar-track]:bg-transparent"
-              >
-                {todas.map((item) => (
-                  <CategoriaItem key={`exp-${item.categoria}`} item={item} max={max} />
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
-      )}
-    </motion.div>
+    <TopRanking
+      titulo="Top categorias"
+      subtitulo="Volume de chamados por categoria."
+      todas={todas}
+      unidadeSingular="chamado"
+      unidadePlural="chamados"
+      carregando={carregando}
+    />
   );
 }
 
-interface CategoriaItemData {
-  categoria: CategoriaChamado;
-  label: string;
-  qtd: number;
+// ─────────────────────── Top Equipamentos (por modelo, com fotos) ───────────────────────
+
+const ICONE_TIPO_EQUIPAMENTO: Record<TipoEquipamento, ElementType> = {
+  NOTEBOOK: HardDrive,
+  DESKTOP: HardDrive,
+  MONITOR: Monitor,
+  IMPRESSORA: Printer,
+  CELULAR: Smartphone,
+  PERIFERICO: Wrench,
+  OUTRO: Shapes,
+};
+
+function LeadingFoto({
+  eq,
+  size = 44,
+}: {
+  eq: { tipo: TipoEquipamento; marca: string; modelo: string };
+  size?: number;
+}) {
+  const [erro, setErro] = useState(false);
+  const url = fotoDoEquipamento(eq);
+  const Icone = ICONE_TIPO_EQUIPAMENTO[eq.tipo] ?? Shapes;
+  return (
+    <div
+      className="flex shrink-0 items-center justify-center"
+      style={{ width: size, height: size }}
+    >
+      {url && !erro ? (
+        <img
+          src={url}
+          alt={`${eq.marca} ${eq.modelo}`}
+          loading="lazy"
+          onError={() => setErro(true)}
+          className="h-full w-full object-contain"
+        />
+      ) : (
+        <Icone className="text-mute" strokeWidth={1.5} style={{ width: size * 0.55, height: size * 0.55 }} />
+      )}
+    </div>
+  );
 }
 
-function CategoriaItem({ item, max }: { item: CategoriaItemData; max: number }) {
-  const Icone = ICONE_CATEGORIA[item.categoria] ?? Shapes;
-  const pct = max > 0 ? (item.qtd / max) * 100 : 0;
+function TopEquipamentos() {
+  const { data: equipamentos, isLoading } = useEquipamentosLista(500);
+
+  const todas = useMemo<TopItem[]>(() => {
+    if (!equipamentos) return [];
+    const counts = new Map<
+      string,
+      { tipo: TipoEquipamento; marca: string; modelo: string; qtd: number }
+    >();
+    for (const eq of equipamentos) {
+      const chave = `${eq.tipo}|${eq.marca}|${eq.modelo}`;
+      const atual = counts.get(chave);
+      if (atual) {
+        atual.qtd += 1;
+      } else {
+        counts.set(chave, { tipo: eq.tipo, marca: eq.marca, modelo: eq.modelo, qtd: 1 });
+      }
+    }
+    return Array.from(counts.entries())
+      .map(([chave, v]) => ({
+        chave,
+        label: `${v.marca} ${v.modelo}`,
+        sublabel: tipoEquipamentoLabel[v.tipo] ?? v.tipo,
+        qtd: v.qtd,
+        leading: <LeadingFoto eq={v} />,
+        mini: <LeadingFoto eq={v} size={28} />,
+      }))
+      .sort((a, b) => b.qtd - a.qtd);
+  }, [equipamentos]);
+
   return (
-    <motion.div
-      variants={{
-        hidden: { opacity: 0, x: 8, y: 8 },
-        visible: { opacity: 1, x: 0, y: 0 },
-      }}
-      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-      className="flex items-center gap-4 rounded-2xl px-3 py-2.5 transition-colors hover:bg-[#1a1a1a]"
-    >
-      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
-        <Icone className="h-5 w-5" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-baseline justify-between gap-2">
-          <p className="truncate text-sm font-semibold text-ink">{item.label}</p>
-          <p className="text-xs tabular-nums text-mute">
-            {item.qtd} {item.qtd === 1 ? 'chamado' : 'chamados'}
-          </p>
-        </div>
-        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#2a2a2a]">
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${pct}%` }}
-            transition={{ duration: 0.7, delay: 0.1, ease: [0.4, 0, 0.2, 1] }}
-            className="h-full rounded-full bg-gradient-to-r from-primary to-primary-soft"
-          />
-        </div>
-      </div>
-    </motion.div>
+    <TopRanking
+      titulo="Top equipamentos"
+      subtitulo="Modelos com maior volume no inventário."
+      todas={todas}
+      unidadeSingular="unidade"
+      unidadePlural="unidades"
+      carregando={isLoading}
+      expansivel
+      iconeAgrupador={Layers}
+      labelAgrupador="Todos os modelos"
+      unidadeAgrupadorSingular="modelo no inventário"
+      unidadeAgrupadorPlural="modelos no inventário"
+    />
   );
 }
 

@@ -138,13 +138,10 @@ export function Sidebar() {
         )}
       >
         <div
-          className={cn(
-            'animate-element flex items-center overflow-hidden transition-all duration-300 ease-in-out',
-            colapsada ? 'pointer-events-none w-0 opacity-0' : 'w-auto opacity-100',
-          )}
+          className="animate-element flex items-center"
           style={{ animationDelay: `${next()}ms` }}
         >
-          <Logo size={20} />
+          {!colapsada && <Logo variant="completo" cor="degrade" height={20} />}
         </div>
         <HoverHint active={colapsada} label="Expandir sidebar">
           <button

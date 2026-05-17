@@ -42,8 +42,10 @@ import {
   useHistoricoChamado,
 } from '@/lib/chamados';
 import { useAdmins } from '@/lib/usuarios';
-import { sugerirArtigos, type Artigo } from '@/lib/baseConhecimento';
+import { ranquearArtigos, useArtigos } from '@/lib/artigos';
+import type { ArtigoResponse } from '@/types';
 import {
+  categoriaArtigoLabel,
   categoriaChamadoLabel,
   formatarDataHora,
   iniciaisDe,
@@ -110,14 +112,18 @@ export function ChamadoDetalhe() {
     [historico],
   );
 
-  const sugestoes = useMemo<Artigo[]>(() => {
-    if (!chamado) return [];
-    return sugerirArtigos({
-      categoria: chamado.categoria,
-      titulo: chamado.titulo,
-      descricao: chamado.descricao,
-    });
-  }, [chamado]);
+  const { data: artigosPage } = useArtigos();
+  const sugestoes = useMemo<ArtigoResponse[]>(() => {
+    if (!chamado || !artigosPage?.content) return [];
+    return ranquearArtigos(
+      {
+        categoria: chamado.categoria,
+        titulo: chamado.titulo,
+        descricao: chamado.descricao,
+      },
+      artigosPage.content,
+    );
+  }, [chamado, artigosPage]);
 
   if (isLoading) {
     return (
@@ -469,7 +475,7 @@ export function ChamadoDetalhe() {
                           {a.titulo}
                         </p>
                         <p className="mt-1 text-[10px] uppercase tracking-wider text-mute">
-                          {a.categoria} · {a.uteis} úteis
+                          {categoriaArtigoLabel[a.categoria]} · {a.uteis} úteis
                         </p>
                       </div>
                       <ExternalLink className="h-3.5 w-3.5 shrink-0 text-mute opacity-0 transition-opacity group-hover:opacity-100" />

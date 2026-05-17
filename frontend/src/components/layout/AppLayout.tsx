@@ -5,6 +5,8 @@ import { NovoEquipamentoModal } from '@/components/equipamento/NovoEquipamentoMo
 import { EquipamentoSheet } from '@/components/equipamento/EquipamentoSheet';
 import { NovoUsuarioModal } from '@/components/usuario/NovoUsuarioModal';
 import { EditarUsuarioModal } from '@/components/usuario/EditarUsuarioModal';
+import { ArtigoFormModal } from '@/components/artigo/ArtigoFormModal';
+import { ArtigoDetalheModal } from '@/components/artigo/ArtigoDetalheModal';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 
@@ -26,6 +28,8 @@ export function AppLayout() {
       <EquipamentoSheet />
       <NovoUsuarioModal />
       <EditarUsuarioModal />
+      <ArtigoFormModal />
+      <ArtigoDetalheModal />
     </div>
   );
 }

@@ -29,6 +29,8 @@ export type TipoEquipamento =
 
 export type StatusEquipamento = 'EM_USO' | 'ESTOQUE' | 'MANUTENCAO' | 'BAIXADO';
 
+export type CategoriaArtigo = 'HARDWARE' | 'SOFTWARE' | 'REDE' | 'ACESSO' | 'OUTROS';
+
 export type TipoEventoHistorico =
   | 'CRIADO'
   | 'STATUS_ALTERADO'
@@ -134,6 +136,27 @@ export interface DashboardResponse {
   totalResolvidosMes: number;
   porPrioridade: Record<string, number>;
   porCategoria: Record<string, number>;
+}
+
+export interface ArtigoResponse {
+  id: number;
+  titulo: string;
+  resumo: string;
+  conteudo: string;
+  categoria: CategoriaArtigo;
+  autorId: number | null;
+  autorNome: string | null;
+  visualizacoes: number;
+  uteis: number;
+  criadoEm: string;
+  atualizadoEm: string;
+}
+
+export interface ArtigoRequest {
+  titulo: string;
+  resumo: string;
+  conteudo: string;
+  categoria: CategoriaArtigo;
 }
 
 export interface EquipamentoResponse {

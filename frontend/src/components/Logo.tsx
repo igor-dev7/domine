@@ -1,17 +1,43 @@
-import { Zap } from 'lucide-react';
+type Variante = 'completo' | 'icone';
+type Cor = 'branca' | 'degrade';
 
-export function Logo({ size = 24, iconOnly = false }: { size?: number; iconOnly?: boolean }) {
+interface LogoProps {
+  variant?: Variante;
+  cor?: Cor;
+  height?: number;
+  className?: string;
+}
+
+// Aspect ratios reais dos SVGs (largura / altura).
+const ASPECT: Record<Variante, number> = {
+  completo: 1498 / 249, // ~6.016
+  icone: 1, // 241 / 241
+};
+
+const SRC: Record<`${Variante}-${Cor}`, string> = {
+  'completo-branca': '/logos/logo-completo-branca.svg',
+  'completo-degrade': '/logos/logo-completo-colorido.svg',
+  'icone-branca': '/logos/icone-branca.svg',
+  'icone-degrade': '/logos/icone-degrade.svg',
+};
+
+export function Logo({
+  variant = 'completo',
+  cor = 'branca',
+  height = 24,
+  className,
+}: LogoProps) {
+  const src = SRC[`${variant}-${cor}`];
+  const width = Math.round(height * ASPECT[variant]);
   return (
-    <div className="flex items-center gap-2">
-      <Zap className="text-primary shrink-0" size={size} strokeWidth={2.5} />
-      {!iconOnly && (
-        <span
-          className="whitespace-nowrap font-semibold tracking-tight text-ink-strong"
-          style={{ fontSize: size }}
-        >
-          Domine
-        </span>
-      )}
-    </div>
+    <img
+      src={src}
+      alt="Domine"
+      height={height}
+      width={width}
+      style={{ height, width }}
+      className={className}
+      draggable={false}
+    />
   );
 }

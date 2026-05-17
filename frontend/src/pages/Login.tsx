@@ -4,6 +4,7 @@ import { AxiosError } from 'axios';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { Logo } from '@/components/Logo';
 import { SignInPage, type Testimonial } from '@/components/ui/sign-in';
 import type { ErroResponse, LoginResponse } from '@/types';
 
@@ -63,7 +64,14 @@ export function Login() {
 
   return (
     <SignInPage
-      title={<span className="font-light text-ink-strong tracking-tighter whitespace-nowrap">Bem-vindo de volta!</span>}
+      title={
+        <span className="flex flex-col items-start gap-4">
+          <Logo variant="completo" cor="degrade" height={36} />
+          <span className="font-light text-ink-strong tracking-tighter whitespace-nowrap">
+            Bem-vindo de volta!
+          </span>
+        </span>
+      }
       description="Acesse sua conta no Domine e gerencie seus ativos"
       heroVideoSrc={heroVideoSrc}
       testimonials={testimonials}

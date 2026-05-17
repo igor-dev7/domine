@@ -1,4 +1,5 @@
 import type {
+  CategoriaArtigo,
   CategoriaChamado,
   PrioridadeChamado,
   StatusChamado,
@@ -40,6 +41,14 @@ export const tipoEquipamentoLabel: Record<TipoEquipamento, string> = {
   CELULAR: 'Celular',
   PERIFERICO: 'Periférico',
   OUTRO: 'Outro',
+};
+
+export const categoriaArtigoLabel: Record<CategoriaArtigo, string> = {
+  HARDWARE: 'Hardware',
+  SOFTWARE: 'Software',
+  REDE: 'Rede',
+  ACESSO: 'Acesso',
+  OUTROS: 'Outros',
 };
 
 export const statusEquipamentoLabel: Record<StatusEquipamento, string> = {

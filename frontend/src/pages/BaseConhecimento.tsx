@@ -1,152 +1,135 @@
-import { useMemo, useState } from 'react';
-import { Eye, FileText, Plus, Search, ThumbsUp } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { AxiosError } from 'axios';
+import { AnimatePresence, motion } from 'framer-motion';
 import { toast } from 'sonner';
+import {
+  Eye,
+  FileText,
+  MoreVertical,
+  Pencil,
+  Plus,
+  Search,
+  ThumbsUp,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { formatarData } from '@/lib/format';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { EmptyState } from '@/components/EmptyState';
+import { SkeletonLinhas } from '@/components/LoadingSkeleton';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { useArtigoFormModal } from '@/contexts/ArtigoFormModalContext';
+import { useArtigoDetalheModal } from '@/contexts/ArtigoDetalheModalContext';
+import {
+  useArtigos,
+  useExcluirArtigo,
+  type ArtigoFiltro,
+} from '@/lib/artigos';
+import { categoriaArtigoLabel, formatarData } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import type { ArtigoResponse, CategoriaArtigo } from '@/types';
 
-type CategoriaArtigo = 'Hardware' | 'Software' | 'Rede' | 'Acesso' | 'Outros';
+const SIDEBAR_EASE = [0.16, 1, 0.3, 1] as const;
+const DEBOUNCE_BUSCA_MS = 300;
 
-interface Artigo {
-  id: number;
-  titulo: string;
-  resumo: string;
-  categoria: CategoriaArtigo;
-  autor: string;
-  visualizacoes: number;
-  uteis: number;
-  criadoEm: string;
-}
+const stagger = {
+  container: {
+    hidden: {},
+    visible: { transition: { staggerChildren: 0.12, delayChildren: 0.05 } },
+  },
+  item: {
+    hidden: { opacity: 0, y: 20, filter: 'blur(12px)' },
+    visible: {
+      opacity: 1,
+      y: 0,
+      filter: 'blur(0px)',
+      transition: { duration: 0.8, ease: SIDEBAR_EASE },
+    },
+  },
+};
 
-const ARTIGOS: Artigo[] = [
-  {
-    id: 1,
-    titulo: 'Como resetar a senha do Wi-Fi corporativo',
-    resumo:
-      'Passo a passo pra trocar a senha do roteador principal sem derrubar a rede do escritório. Inclui janela de manutenção sugerida.',
-    categoria: 'Rede',
-    autor: 'Admin Domine',
-    visualizacoes: 312,
-    uteis: 47,
-    criadoEm: '2026-04-22',
+const cardVariants = {
+  hidden: { opacity: 0, y: 16, scale: 0.98, filter: 'blur(4px)' },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    filter: 'blur(0px)',
+    transition: { type: 'spring' as const, stiffness: 400, damping: 25, mass: 0.7 },
   },
-  {
-    id: 2,
-    titulo: 'Instalação do Microsoft Office via portal corporativo',
-    resumo:
-      'Procedimento oficial pra novos colaboradores instalarem o pacote Office com a licença do plano Microsoft 365 da empresa.',
-    categoria: 'Software',
-    autor: 'Bruno Lima',
-    visualizacoes: 264,
-    uteis: 38,
-    criadoEm: '2026-04-30',
-  },
-  {
-    id: 3,
-    titulo: 'Solicitação de acesso a sistemas internos',
-    resumo:
-      'Fluxo de aprovação pra liberar acesso a ERP, CRM e ferramentas restritas. Inclui matriz RACI e SLA típico de 1 dia útil.',
-    categoria: 'Acesso',
-    autor: 'Ana Costa',
-    visualizacoes: 189,
-    uteis: 29,
-    criadoEm: '2026-05-02',
-  },
-  {
-    id: 4,
-    titulo: 'Diagnóstico de problemas comuns no notebook Dell Latitude',
-    resumo:
-      'Checklist rápido pra triagem antes de abrir chamado: bateria, drivers, ventilação e indicadores de hardware.',
-    categoria: 'Hardware',
-    autor: 'Admin Domine',
-    visualizacoes: 152,
-    uteis: 22,
-    criadoEm: '2026-05-05',
-  },
-  {
-    id: 5,
-    titulo: 'Configuração de e-mail corporativo no celular pessoal',
-    resumo:
-      'Tutorial passo a passo pra Android e iOS, com aplicação de perfil MDM e ativação de PIN obrigatório.',
-    categoria: 'Software',
-    autor: 'Carla Mendes',
-    visualizacoes: 198,
-    uteis: 31,
-    criadoEm: '2026-05-08',
-  },
-  {
-    id: 6,
-    titulo: 'O que fazer se sua impressora não imprime',
-    resumo:
-      'Lista de causas comuns (driver, fila travada, IP duplicado) e como resolver antes de abrir chamado pra TI.',
-    categoria: 'Hardware',
-    autor: 'Bruno Lima',
-    visualizacoes: 174,
-    uteis: 28,
-    criadoEm: '2026-05-10',
-  },
-  {
-    id: 7,
-    titulo: 'Boas práticas de segurança da informação',
-    resumo:
-      'Política da empresa: senhas, 2FA, dispositivos pessoais, phishing e canais de denúncia.',
-    categoria: 'Outros',
-    autor: 'Admin Domine',
-    visualizacoes: 421,
-    uteis: 67,
-    criadoEm: '2026-04-15',
-  },
-  {
-    id: 8,
-    titulo: 'VPN corporativa: instalação e troubleshooting',
-    resumo:
-      'Como instalar o cliente VPN, configurar perfil e resolver os erros mais comuns (timeout, DNS, certificado expirado).',
-    categoria: 'Rede',
-    autor: 'Ana Costa',
-    visualizacoes: 245,
-    uteis: 35,
-    criadoEm: '2026-04-28',
-  },
-];
+};
 
-const CATEGORIAS: { valor: CategoriaArtigo | 'TODAS'; label: string; cor: string }[] = [
-  { valor: 'TODAS', label: 'Todas', cor: 'border-hairline bg-canvas-soft text-body' },
-  {
-    valor: 'Hardware',
-    label: 'Hardware',
-    cor: 'border-amber-500/40 bg-amber-500/10 text-amber-300',
-  },
-  {
-    valor: 'Software',
-    label: 'Software',
-    cor: 'border-blue-500/40 bg-blue-500/10 text-blue-300',
-  },
-  { valor: 'Rede', label: 'Rede', cor: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300' },
-  { valor: 'Acesso', label: 'Acesso', cor: 'border-orange-500/40 bg-orange-500/10 text-orange-300' },
-  { valor: 'Outros', label: 'Outros', cor: 'border-mute/40 bg-canvas-soft text-mute' },
-];
+const COR_CATEGORIA: Record<CategoriaArtigo, string> = {
+  HARDWARE: 'border-amber-500/40 bg-amber-500/10 text-amber-300',
+  SOFTWARE: 'border-blue-500/40 bg-blue-500/10 text-blue-300',
+  REDE: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300',
+  ACESSO: 'border-orange-500/40 bg-orange-500/10 text-orange-300',
+  OUTROS: 'border-mute/40 bg-canvas-soft text-mute',
+};
+
+const CATEGORIAS: CategoriaArtigo[] = ['HARDWARE', 'SOFTWARE', 'REDE', 'ACESSO', 'OUTROS'];
 
 export function BaseConhecimento() {
-  const [categoria, setCategoria] = useState<CategoriaArtigo | 'TODAS'>('TODAS');
-  const [busca, setBusca] = useState('');
+  const { abrirCriar, abrirEditar } = useArtigoFormModal();
+  const { abrir: abrirDetalhe } = useArtigoDetalheModal();
 
-  const artigos = useMemo(() => {
-    const buscaLower = busca.toLowerCase();
-    return ARTIGOS.filter((a) => {
-      const passaCategoria = categoria === 'TODAS' || a.categoria === categoria;
-      const passaBusca =
-        !busca ||
-        a.titulo.toLowerCase().includes(buscaLower) ||
-        a.resumo.toLowerCase().includes(buscaLower);
-      return passaCategoria && passaBusca;
-    });
-  }, [categoria, busca]);
+  const [categoria, setCategoria] = useState<CategoriaArtigo | null>(null);
+  const [busca, setBusca] = useState('');
+  const [filtro, setFiltro] = useState<ArtigoFiltro>({ size: 100 });
+  const [paraExcluir, setParaExcluir] = useState<ArtigoResponse | null>(null);
+
+  const { data, isLoading, isFetching } = useArtigos(filtro);
+  const excluir = useExcluirArtigo();
+
+  // Busca com debounce.
+  useEffect(() => {
+    const buscaAtual = filtro.busca ?? '';
+    if (busca.trim() === buscaAtual) return;
+    const id = setTimeout(() => {
+      setFiltro((f) => ({ ...f, busca: busca.trim() || null, page: 0 }));
+    }, DEBOUNCE_BUSCA_MS);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [busca]);
+
+  // Categoria muda → atualiza filtro.
+  useEffect(() => {
+    setFiltro((f) => ({ ...f, categoria, page: 0 }));
+  }, [categoria]);
+
+  async function confirmarExclusao() {
+    if (!paraExcluir) return;
+    try {
+      await excluir.mutateAsync(paraExcluir.id);
+      toast.success(`Artigo "${paraExcluir.titulo}" excluído.`);
+      setParaExcluir(null);
+    } catch (err) {
+      const ax = err as AxiosError<{ mensagens?: string[] }>;
+      toast.error(ax.response?.data?.mensagens?.[0] ?? 'Erro ao excluir.');
+    }
+  }
+
+  const artigos = useMemo(() => data?.content ?? [], [data]);
+  const temFiltroAtivo = !!filtro.busca || !!filtro.categoria;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+    <motion.div
+      initial="hidden"
+      animate="visible"
+      variants={stagger.container}
+      className="space-y-6"
+    >
+      {/* Header */}
+      <motion.div
+        variants={stagger.item}
+        className="flex flex-wrap items-start justify-between gap-4"
+      >
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
             Conhecimento
@@ -154,100 +137,270 @@ export function BaseConhecimento() {
           <h1 className="mt-2 text-3xl font-bold tracking-tight text-ink-strong">
             Base de conhecimento
           </h1>
-          <p className="mt-2 max-w-3xl text-sm text-body">
+          <p className="mt-1 max-w-3xl text-sm text-body">
             Artigos e procedimentos internos. Self-service pros colaboradores reduz volume de
             chamados repetidos.
           </p>
         </div>
-        <Button onClick={() => toast.info('Editor de artigos em breve.')}>
-          <Plus className="mr-2 h-4 w-4" />
+        <Button className="rounded-2xl" onClick={abrirCriar}>
+          <Plus className="h-4 w-4" />
           Novo artigo
         </Button>
-      </div>
+      </motion.div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative min-w-[260px] flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-mute" />
+      {/* Toolbar inline */}
+      <motion.div variants={stagger.item} className="flex flex-wrap items-center gap-2">
+        <div className="relative min-w-[220px] max-w-xl flex-1">
+          <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-mute" />
           <Input
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             placeholder="Buscar artigos pelo título ou resumo"
-            className="pl-9"
+            className="h-10 pl-10 pr-10"
           />
+          {busca && (
+            <button
+              type="button"
+              onClick={() => setBusca('')}
+              aria-label="Limpar busca"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-mute transition-colors hover:text-ink"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
-      </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        {CATEGORIAS.map((c) => (
-          <button
-            key={c.valor}
+        {temFiltroAtivo && (
+          <Button
             type="button"
-            onClick={() => setCategoria(c.valor)}
+            variant="ghost"
+            size="sm"
+            className="rounded-2xl"
+            onClick={() => {
+              setBusca('');
+              setCategoria(null);
+            }}
+          >
+            <X className="h-3.5 w-3.5" />
+            Limpar
+          </Button>
+        )}
+      </motion.div>
+
+      {/* Filtro por categoria — chips */}
+      <motion.div variants={stagger.item} className="flex flex-wrap items-center gap-2">
+        <ChipCategoria
+          ativo={categoria === null}
+          onClick={() => setCategoria(null)}
+          label="Todas"
+          cor="border-hairline bg-canvas-soft text-body"
+        />
+        {CATEGORIAS.map((c) => (
+          <ChipCategoria
+            key={c}
+            ativo={categoria === c}
+            onClick={() => setCategoria(c)}
+            label={categoriaArtigoLabel[c]}
+            cor={COR_CATEGORIA[c]}
+          />
+        ))}
+      </motion.div>
+
+      {/* Grid de cards */}
+      <motion.div variants={stagger.item} className="space-y-3">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <div>
+            <h3 className="text-base font-semibold text-ink">
+              {data ? `${data.totalElements} artigos` : 'Resultados'}
+            </h3>
+            <p className="mt-1 text-xs text-mute">
+              {isFetching ? 'atualizando…' : 'Clique em um artigo para abrir o conteúdo completo.'}
+            </p>
+          </div>
+        </div>
+
+        {isLoading ? (
+          <div className="rounded-3xl bg-[#1a1a1a] p-6">
+            <SkeletonLinhas linhas={6} />
+          </div>
+        ) : artigos.length === 0 ? (
+          <div className="rounded-3xl bg-[#1a1a1a] p-6">
+            <EmptyState
+              icon={<FileText className="h-5 w-5" />}
+              titulo="Nenhum artigo encontrado."
+              descricao={
+                temFiltroAtivo
+                  ? 'Ajuste os filtros ou crie um novo artigo.'
+                  : 'Comece documentando um procedimento.'
+              }
+              acao={
+                <Button variant="outline" onClick={abrirCriar}>
+                  <Plus className="h-4 w-4" />
+                  Novo artigo
+                </Button>
+              }
+            />
+          </div>
+        ) : (
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={`${filtro.categoria}-${filtro.busca}`}
+              initial="hidden"
+              animate="visible"
+              variants={{
+                visible: { transition: { staggerChildren: 0.04, delayChildren: 0.05 } },
+              }}
+              className="grid gap-4 md:grid-cols-2 lg:grid-cols-3"
+            >
+              {artigos.map((art) => (
+                <motion.div key={art.id} variants={cardVariants}>
+                  <CardArtigo
+                    artigo={art}
+                    onAbrir={() => abrirDetalhe(art.id)}
+                    onEditar={() => abrirEditar(art.id)}
+                    onExcluir={() => setParaExcluir(art)}
+                  />
+                </motion.div>
+              ))}
+            </motion.div>
+          </AnimatePresence>
+        )}
+      </motion.div>
+
+      <ConfirmDialog
+        open={!!paraExcluir}
+        onOpenChange={(o) => !o && setParaExcluir(null)}
+        titulo={`Excluir "${paraExcluir?.titulo ?? ''}"?`}
+        descricao="Esta ação não pode ser desfeita. O artigo será removido da base."
+        textoConfirmar="Excluir"
+        destrutivo
+        carregando={excluir.isPending}
+        onConfirmar={confirmarExclusao}
+      />
+    </motion.div>
+  );
+}
+
+// ─────────────────────── Card ───────────────────────
+
+function CardArtigo({
+  artigo,
+  onAbrir,
+  onEditar,
+  onExcluir,
+}: {
+  artigo: ArtigoResponse;
+  onAbrir: () => void;
+  onEditar: () => void;
+  onExcluir: () => void;
+}) {
+  return (
+    <div
+      role="link"
+      tabIndex={0}
+      onClick={onAbrir}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onAbrir();
+        }
+      }}
+      className="group relative flex h-full cursor-pointer flex-col rounded-2xl bg-[#1a1a1a] p-5 text-left transition-all hover:bg-gradient-to-br hover:from-primary/5 hover:to-transparent"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+            <FileText className="h-4 w-4" />
+          </div>
+          <span
             className={cn(
-              'inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wider transition-all',
-              categoria === c.valor
-                ? c.cor
-                : 'border-hairline bg-transparent text-mute hover:border-hairline-soft hover:text-ink',
+              'inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider',
+              COR_CATEGORIA[artigo.categoria],
             )}
           >
-            {c.label}
-          </button>
-        ))}
+            {categoriaArtigoLabel[artigo.categoria]}
+          </span>
+        </div>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              aria-label="Ações do artigo"
+              className="text-mute opacity-0 transition-opacity hover:text-ink group-hover:opacity-100"
+            >
+              <MoreVertical className="h-4 w-4" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="end"
+            onClick={(e) => e.stopPropagation()}
+            className="w-44"
+          >
+            <DropdownMenuItem onClick={onEditar}>
+              <Pencil className="h-3.5 w-3.5" />
+              Editar
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={onExcluir}
+              className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Excluir
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
-      {artigos.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center text-sm text-mute">
-            Nenhum artigo encontrado.
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {artigos.map((art) => {
-            const corCategoria = CATEGORIAS.find((c) => c.valor === art.categoria)?.cor;
-            return (
-              <button
-                key={art.id}
-                type="button"
-                onClick={() => toast.info(`Abrindo artigo: "${art.titulo}" (página em breve).`)}
-                className="group flex h-full flex-col rounded-md border border-hairline bg-canvas-soft p-5 text-left transition-all hover:border-primary/40 hover:bg-canvas"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-sm border border-hairline text-primary">
-                    <FileText className="h-4 w-4" />
-                  </div>
-                  <span
-                    className={cn(
-                      'inline-flex items-center rounded-sm border px-2 py-0.5 text-xs font-semibold uppercase tracking-wider',
-                      corCategoria,
-                    )}
-                  >
-                    {art.categoria}
-                  </span>
-                </div>
-                <h3 className="mt-3 text-sm font-semibold text-ink transition-colors group-hover:text-primary">
-                  {art.titulo}
-                </h3>
-                <p className="mt-2 line-clamp-3 flex-1 text-sm text-body">{art.resumo}</p>
-                <div className="mt-4 flex items-center justify-between border-t border-hairline pt-3 text-xs text-mute">
-                  <span>{art.autor}</span>
-                  <span>{formatarData(art.criadoEm)}</span>
-                </div>
-                <div className="mt-2 flex items-center gap-3 text-xs text-mute">
-                  <span className="flex items-center gap-1">
-                    <Eye className="h-3 w-3" />
-                    {art.visualizacoes}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <ThumbsUp className="h-3 w-3" />
-                    {art.uteis} úteis
-                  </span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      )}
+      <h3 className="mt-4 text-sm font-semibold text-ink transition-colors group-hover:text-primary">
+        {artigo.titulo}
+      </h3>
+      <p className="mt-2 line-clamp-3 flex-1 text-sm text-body">{artigo.resumo}</p>
+
+      <div className="mt-4 flex items-center justify-between border-t border-[#2a2a2a] pt-3 text-xs text-mute">
+        <span className="truncate">{artigo.autorNome ?? '—'}</span>
+        <span>{formatarData(artigo.criadoEm)}</span>
+      </div>
+
+      <div className="mt-2 flex items-center gap-3 text-xs text-mute">
+        <span className="inline-flex items-center gap-1">
+          <Eye className="h-3 w-3" />
+          {artigo.visualizacoes}
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <ThumbsUp className="h-3 w-3" />
+          {artigo.uteis} úteis
+        </span>
+      </div>
     </div>
+  );
+}
+
+// ─────────────────────── Chip de categoria ───────────────────────
+
+function ChipCategoria({
+  ativo,
+  onClick,
+  label,
+  cor,
+}: {
+  ativo: boolean;
+  onClick: () => void;
+  label: string;
+  cor: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'inline-flex items-center rounded-2xl border px-3 py-1.5 text-xs font-medium uppercase tracking-wider transition-all',
+        ativo
+          ? cor
+          : 'border-hairline bg-transparent text-mute hover:border-hairline-soft hover:text-ink',
+      )}
+    >
+      {label}
+    </button>
   );
 }
