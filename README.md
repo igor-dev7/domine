@@ -105,8 +105,6 @@ domine/
 | Raul Justos | 164026 | Front-End |
 | Gabriel Pereira | 155802 | Back-End |
 | Igor Moreira | — | Coordenação / Full-stack |
-| Gustavo Braga | — | — |
-| Arthur Oliveira Ribeiro | — | — |
 
 ## Gerenciamento
 
