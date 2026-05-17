@@ -251,7 +251,7 @@ export function ChamadosLista() {
               : 'Você vê apenas os chamados que abriu.'}
           </p>
         </div>
-        <Button className="rounded-2xl" onClick={abrirNovoChamado}>
+        <Button className="rounded-2xl" onClick={() => abrirNovoChamado()}>
           <Plus className="h-4 w-4" />
           Novo chamado
         </Button>
@@ -364,7 +364,7 @@ export function ChamadosLista() {
                 titulo="Nenhum chamado encontrado."
                 descricao="Ajuste os filtros ou abra um novo chamado."
                 acao={
-                  <Button variant="outline" onClick={abrirNovoChamado}>
+                  <Button variant="outline" onClick={() => abrirNovoChamado()}>
                     <Plus className="h-4 w-4" />
                     Novo chamado
                   </Button>

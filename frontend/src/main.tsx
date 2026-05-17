@@ -10,6 +10,7 @@ import { NovoChamadoModalProvider } from '@/contexts/NovoChamadoModalContext';
 import { NovoEquipamentoModalProvider } from '@/contexts/NovoEquipamentoModalContext';
 import { EquipamentoSheetProvider } from '@/contexts/EquipamentoSheetContext';
 import { NovoUsuarioModalProvider } from '@/contexts/NovoUsuarioModalContext';
+import { EditarUsuarioModalProvider } from '@/contexts/EditarUsuarioModalContext';
 import './index.css';
 
 const queryClient = new QueryClient({
@@ -29,7 +30,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                 <NovoEquipamentoModalProvider>
                   <EquipamentoSheetProvider>
                     <NovoUsuarioModalProvider>
-                      <App />
+                      <EditarUsuarioModalProvider>
+                        <App />
+                      </EditarUsuarioModalProvider>
                     </NovoUsuarioModalProvider>
                   </EquipamentoSheetProvider>
                 </NovoEquipamentoModalProvider>

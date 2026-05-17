@@ -68,7 +68,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 export function NovoChamadoModal() {
-  const { open, fechar } = useNovoChamadoModal();
+  const { open, preset, fechar } = useNovoChamadoModal();
   const navigate = useNavigate();
   const { usuario } = useAuth();
   const isAdmin = usuario?.perfil === 'ADMIN';
@@ -105,12 +105,21 @@ export function NovoChamadoModal() {
     }
   }, [open]);
 
-  // Reseta o form ao fechar.
+  // Reseta o form ao abrir/fechar, aplicando preset quando houver.
   useEffect(() => {
-    if (!open) {
+    if (open) {
+      reset({
+        titulo: preset?.titulo ?? '',
+        descricao: preset?.descricao ?? '',
+        categoria: preset?.categoria ?? 'OUTRO',
+        prioridade: preset?.prioridade ?? 'MEDIA',
+        equipamentoId:
+          preset?.equipamentoId != null ? String(preset.equipamentoId) : undefined,
+      });
+    } else {
       reset({ prioridade: 'MEDIA', categoria: 'OUTRO', titulo: '', descricao: '', equipamentoId: undefined });
     }
-  }, [open, reset]);
+  }, [open, preset, reset]);
 
   async function onSubmit(values: FormValues) {
     try {
