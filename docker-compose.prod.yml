@@ -1,0 +1,50 @@
+# Compose de PRODUÇÃO — sobrepõe o docker-compose.yml.
+#
+# Importante: NÃO use o override automático (docker-compose.override.yml é de dev).
+# Em produção, rode SEMPRE com os arquivos explícitos:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+#     --env-file /opt/domine/.env pull
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+#     --env-file /opt/domine/.env up -d
+#
+# As imagens vêm do GHCR (publicadas pelo GitHub Actions). O `build:` continua
+# presente como fallback para construir local se a imagem não existir ainda.
+#
+# Portas: nada é publicado pro 0.0.0.0. O frontend escuta APENAS em 127.0.0.1:8090,
+# que é onde o Cloudflare Tunnel encaminha o tráfego de domine.igor-dev.cloud.
+
+services:
+  db:
+    # Remove o "5432:5432" do base — banco fica acessível só pela rede do Compose.
+    ports: !reset []
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD em /opt/domine/.env}
+
+  backend:
+    image: ghcr.io/igor-dev7/domine-backend:latest
+    pull_policy: always
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: runtime
+    # Remove o "8080:8080" do base — backend só é acessado pelo nginx do frontend.
+    ports: !reset []
+    environment:
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET em /opt/domine/.env}
+
+  frontend:
+    image: ghcr.io/igor-dev7/domine-frontend:latest
+    pull_policy: always
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: prod
+      args:
+        VITE_API_URL: /api/v1
+    # Publica nginx APENAS em loopback. O acesso externo entra pelo Cloudflare Tunnel.
+    ports: !override
+      - "127.0.0.1:8090:80"
+    # O bundle estático já tem VITE_API_URL=/api/v1 congelada — env runtime não importa.
+    environment: !reset {}
