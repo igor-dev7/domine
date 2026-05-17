@@ -13,9 +13,12 @@ COPY . .
 # cache do Docker/Podman. Garante que `node_modules` está em sincronia com
 # `package.json` / `package-lock.json` (que vêm do bind mount em dev).
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+# Remove CRLF caso o checkout em Windows tenha convertido o script + dá +x.
+RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh \
+ && chmod +x /usr/local/bin/docker-entrypoint.sh
 
 EXPOSE 5173
 
-ENTRYPOINT ["docker-entrypoint.sh"]
+# Invocamos via `sh` explicitamente — não depende do shebang nem do bit +x.
+ENTRYPOINT ["sh", "/usr/local/bin/docker-entrypoint.sh"]
 CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

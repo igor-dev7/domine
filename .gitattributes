@@ -1,0 +1,5 @@
+# Garante LF (Unix line endings) em scripts shell mesmo no Windows.
+# Sem isso, o checkout autocrlf=true converte pra CRLF e o `sh` no Alpine quebra
+# com "exec container process: No such file or directory".
+*.sh text eol=lf
+docker-entrypoint.sh text eol=lf
