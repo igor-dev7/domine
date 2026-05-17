@@ -109,10 +109,14 @@ export function useMarcarUtilArtigo() {
   });
 }
 
-// ─────────────────────── Ranking pra sugestão em chamados ───────────────────────
+// ─────────────────────── Sugestões pra chamados (FTS server-side) ───────────────────────
 
-// Mapeia a categoria do chamado pra categoria do artigo.
-const MAP_CATEGORIA: Record<CategoriaChamado, CategoriaArtigo> = {
+/**
+ * Mapeia a categoria do chamado pra categoria do artigo correspondente.
+ * Usado pra dar boost no ranking quando o domínio bate (HARDWARE/IMPRESSAO
+ * ambos colapsam pra HARDWARE no domínio de artigo, etc.).
+ */
+export const MAP_CATEGORIA_CHAMADO_ARTIGO: Record<CategoriaChamado, CategoriaArtigo> = {
   HARDWARE: 'HARDWARE',
   SOFTWARE: 'SOFTWARE',
   REDE: 'REDE',
@@ -122,54 +126,22 @@ const MAP_CATEGORIA: Record<CategoriaChamado, CategoriaArtigo> = {
   OUTRO: 'OUTROS',
 };
 
-const STOP_WORDS = new Set([
-  'a', 'as', 'o', 'os', 'um', 'uma', 'uns', 'umas', 'de', 'da', 'do', 'das', 'dos',
-  'em', 'no', 'na', 'nos', 'nas', 'pra', 'para', 'por', 'com', 'sem', 'sob', 'sobre',
-  'que', 'e', 'ou', 'mas', 'se', 'meu', 'minha', 'seu', 'sua', 'meus', 'minhas',
-  'ao', 'aos', 'à', 'foi', 'esta', 'estao', 'tem', 'ter', 'pode', 'qual', 'quais',
-  'nao', 'ja', 'so', 'mais',
-]);
-
-function tokens(texto: string): string[] {
-  return texto
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .split(/[^a-z0-9]+/)
-    .filter((t) => t.length > 2 && !STOP_WORDS.has(t));
-}
-
-/**
- * Ranqueia artigos relevantes para um chamado.
- * Categoria correspondente vale +5, cada termo do título/descrição
- * que aparece no título/resumo do artigo vale +1.
- */
-export function ranquearArtigos(
-  chamado: { categoria: CategoriaChamado; titulo: string; descricao?: string | null },
-  artigos: ArtigoResponse[],
+export function useSugestoesArtigos(
+  busca: string,
+  categoria: CategoriaArtigo | null,
   limite = 3,
-): ArtigoResponse[] {
-  const catAlvo = MAP_CATEGORIA[chamado.categoria];
-  const termos = new Set([
-    ...tokens(chamado.titulo ?? ''),
-    ...tokens(chamado.descricao ?? ''),
-  ]);
-
-  return artigos
-    .map((a) => {
-      let score = 0;
-      if (a.categoria === catAlvo) score += 5;
-      const corpus = (a.titulo + ' ' + a.resumo)
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[̀-ͯ]/g, '');
-      termos.forEach((t) => {
-        if (corpus.includes(t)) score += 1;
-      });
-      return { artigo: a, score };
-    })
-    .filter((x) => x.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, limite)
-    .map((x) => x.artigo);
+) {
+  const buscaSan = busca.trim();
+  return useQuery({
+    queryKey: [...artigosKeys.all, 'sugestoes', buscaSan, categoria, limite] as const,
+    queryFn: async () => {
+      const params: Record<string, string | number> = { limite };
+      if (buscaSan) params.busca = buscaSan;
+      if (categoria) params.categoria = categoria;
+      const { data } = await api.get<ArtigoResponse[]>('/artigos/sugestoes', { params });
+      return data;
+    },
+    enabled: buscaSan.length > 0 || categoria != null,
+    placeholderData: (prev) => prev,
+  });
 }

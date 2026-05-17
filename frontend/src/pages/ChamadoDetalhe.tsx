@@ -34,6 +34,7 @@ import { SkeletonLinhas } from '@/components/LoadingSkeleton';
 import { StatusBadge } from '@/components/StatusBadge';
 import { PrioridadeBadge } from '@/components/PrioridadeBadge';
 import { useAuth } from '@/contexts/AuthContext';
+import { useArtigoDetalheModal } from '@/contexts/ArtigoDetalheModalContext';
 import {
   useAdicionarComentario,
   useAtribuirTecnico,
@@ -42,8 +43,7 @@ import {
   useHistoricoChamado,
 } from '@/lib/chamados';
 import { useAdmins } from '@/lib/usuarios';
-import { ranquearArtigos, useArtigos } from '@/lib/artigos';
-import type { ArtigoResponse } from '@/types';
+import { MAP_CATEGORIA_CHAMADO_ARTIGO, useSugestoesArtigos } from '@/lib/artigos';
 import {
   categoriaArtigoLabel,
   categoriaChamadoLabel,
@@ -85,6 +85,7 @@ export function ChamadoDetalhe() {
   const params = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { usuario } = useAuth();
+  const { abrir: abrirArtigo } = useArtigoDetalheModal();
   const id = params.id ? Number(params.id) : null;
   const isAdmin = usuario?.perfil === 'ADMIN';
 
@@ -112,18 +113,13 @@ export function ChamadoDetalhe() {
     [historico],
   );
 
-  const { data: artigosPage } = useArtigos();
-  const sugestoes = useMemo<ArtigoResponse[]>(() => {
-    if (!chamado || !artigosPage?.content) return [];
-    return ranquearArtigos(
-      {
-        categoria: chamado.categoria,
-        titulo: chamado.titulo,
-        descricao: chamado.descricao,
-      },
-      artigosPage.content,
-    );
-  }, [chamado, artigosPage]);
+  const buscaSugestao = chamado
+    ? `${chamado.titulo} ${chamado.descricao ?? ''}`.trim()
+    : '';
+  const categoriaSugestao = chamado
+    ? MAP_CATEGORIA_CHAMADO_ARTIGO[chamado.categoria]
+    : null;
+  const { data: sugestoes = [] } = useSugestoesArtigos(buscaSugestao, categoriaSugestao);
 
   if (isLoading) {
     return (
@@ -462,9 +458,7 @@ export function ChamadoDetalhe() {
                   <li key={a.id}>
                     <button
                       type="button"
-                      onClick={() =>
-                        toast.info(`Abrindo artigo: "${a.titulo}" (página em breve).`)
-                      }
+                      onClick={() => abrirArtigo(a.id)}
                       className="group flex w-full items-start gap-3 rounded-2xl bg-[#131313] px-3 py-3 text-left transition-colors hover:bg-gradient-to-r hover:from-primary/10 hover:to-transparent"
                     >
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">

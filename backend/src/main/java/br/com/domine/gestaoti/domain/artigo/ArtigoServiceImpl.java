@@ -12,6 +12,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class ArtigoServiceImpl implements ArtigoService {
@@ -85,6 +87,28 @@ public class ArtigoServiceImpl implements ArtigoService {
         a.incrementarUteis();
         a = artigoRepository.save(a);
         return ArtigoResponse.from(a);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ArtigoResponse> sugerir(String busca, CategoriaArtigo categoria, int limite) {
+        if (limite <= 0) return List.of();
+        String buscaSan = (busca == null) ? "" : busca.trim();
+
+        // Sem texto, retorna os mais úteis da categoria (se houver categoria).
+        if (buscaSan.isEmpty()) {
+            if (categoria == null) return List.of();
+            return artigoRepository.topPorCategoria(categoria.name(), limite).stream()
+                    .map(ArtigoResponse::from)
+                    .toList();
+        }
+
+        // Categoria null vira string vazia — a comparação no SQL não casa com
+        // nenhum valor real do enum, então o boost simplesmente não se aplica.
+        String catNome = categoria == null ? "" : categoria.name();
+        return artigoRepository.sugerirPorTexto(buscaSan, catNome, limite).stream()
+                .map(ArtigoResponse::from)
+                .toList();
     }
 
     private Usuario autorAtualOuNull() {

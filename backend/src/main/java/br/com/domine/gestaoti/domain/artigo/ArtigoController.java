@@ -39,6 +39,15 @@ public class ArtigoController {
         return artigoService.listar(categoria, busca, pageable);
     }
 
+    @GetMapping("/sugestoes")
+    public java.util.List<ArtigoResponse> sugestoes(
+            @RequestParam(required = false) String busca,
+            @RequestParam(required = false) CategoriaArtigo categoria,
+            @RequestParam(defaultValue = "3") int limite
+    ) {
+        return artigoService.sugerir(busca, categoria, limite);
+    }
+
     @GetMapping("/{id}")
     public ArtigoResponse buscarPorId(
             @PathVariable Long id,

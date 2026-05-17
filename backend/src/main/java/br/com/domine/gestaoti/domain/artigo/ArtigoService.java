@@ -13,4 +13,5 @@ public interface ArtigoService {
     ArtigoResponse atualizar(Long id, ArtigoRequest request);
     void excluir(Long id);
     ArtigoResponse marcarUtil(Long id);
+    java.util.List<ArtigoResponse> sugerir(String busca, CategoriaArtigo categoria, int limite);
 }
