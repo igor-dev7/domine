@@ -10,6 +10,7 @@ import * as DialogPrimitive from '@radix-ui/react-dialog';
 import * as VisuallyHidden from '@radix-ui/react-visually-hidden';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogOverlay, DialogPortal } from '@/components/ui/dialog';
+import { DatePicker } from '@/components/ui/date-picker';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -80,11 +81,13 @@ export function NovoEquipamentoModal() {
     register('tipo');
     register('status');
     register('responsavelId');
+    register('dataAquisicao');
   }, [register]);
 
   const tipo = watch('tipo');
   const status = watch('status');
   const responsavelId = watch('responsavelId');
+  const dataAquisicao = watch('dataAquisicao');
 
   // Trava scroll do body enquanto modal aberto.
   useEffect(() => {
@@ -290,7 +293,11 @@ export function NovoEquipamentoModal() {
                       <div className="grid gap-4 md:grid-cols-2">
                         <CampoMotion>
                           <Label htmlFor="dataAquisicao">Data de aquisição</Label>
-                          <Input id="dataAquisicao" type="date" {...register('dataAquisicao')} />
+                          <DatePicker
+                            id="dataAquisicao"
+                            value={dataAquisicao || null}
+                            onChange={(v) => setValue('dataAquisicao', v ?? '')}
+                          />
                         </CampoMotion>
                       </div>
 

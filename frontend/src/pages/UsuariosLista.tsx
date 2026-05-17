@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { AxiosError } from 'axios';
 import { AnimatePresence, motion } from 'framer-motion';
 import { toast } from 'sonner';
@@ -35,6 +34,7 @@ import { SkeletonLinhas } from '@/components/LoadingSkeleton';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNovoUsuarioModal } from '@/contexts/NovoUsuarioModalContext';
+import { useEditarUsuarioModal } from '@/contexts/EditarUsuarioModalContext';
 import {
   useDesativarUsuario,
   useUsuarios,
@@ -91,9 +91,9 @@ const GRID_COLS =
   'xl:grid-cols-[68px_minmax(240px,1fr)_minmax(220px,1.2fr)_180px_160px_40px]';
 
 export function UsuariosLista() {
-  const navigate = useNavigate();
   const { usuario: logado } = useAuth();
   const { abrir: abrirNovo } = useNovoUsuarioModal();
+  const { abrir: abrirEditar } = useEditarUsuarioModal();
 
   const [filtro, setFiltro] = useState<UsuarioFiltro>({ page: 0, size: 10 });
   const [busca, setBusca] = useState('');
@@ -286,7 +286,7 @@ export function UsuariosLista() {
                       <LinhaUsuario
                         u={u}
                         ehVoce={u.id === logado?.id}
-                        onEditar={() => navigate(`/usuarios/${u.id}/editar`)}
+                        onEditar={() => abrirEditar(u.id)}
                         onDesativar={() => setParaDesativar(u)}
                       />
                     </motion.div>

@@ -29,6 +29,7 @@ import {
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import * as VisuallyHidden from '@radix-ui/react-visually-hidden';
 import { Button } from '@/components/ui/button';
+import { DatePicker } from '@/components/ui/date-picker';
 import { Dialog, DialogOverlay, DialogPortal } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -235,6 +236,7 @@ function SheetConteudo({
   const tipo = watch('tipo');
   const status = watch('status');
   const responsavelId = watch('responsavelId');
+  const dataAquisicao = watch('dataAquisicao');
 
   async function onSubmit(values: FormValues) {
     try {
@@ -444,7 +446,13 @@ function SheetConteudo({
               <div className="grid gap-3 md:grid-cols-2">
                 <Campo>
                   <Label htmlFor="dataAquisicao">Data de aquisição</Label>
-                  <Input id="dataAquisicao" type="date" {...register('dataAquisicao')} />
+                  <DatePicker
+                    id="dataAquisicao"
+                    value={dataAquisicao || null}
+                    onChange={(v) =>
+                      setValue('dataAquisicao', v ?? '', { shouldDirty: true })
+                    }
+                  />
                 </Campo>
               </div>
 

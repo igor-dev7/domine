@@ -4,6 +4,7 @@ import { NovoChamadoModal } from '@/components/chamado/NovoChamadoModal';
 import { NovoEquipamentoModal } from '@/components/equipamento/NovoEquipamentoModal';
 import { EquipamentoSheet } from '@/components/equipamento/EquipamentoSheet';
 import { NovoUsuarioModal } from '@/components/usuario/NovoUsuarioModal';
+import { EditarUsuarioModal } from '@/components/usuario/EditarUsuarioModal';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 
@@ -24,6 +25,7 @@ export function AppLayout() {
       <NovoEquipamentoModal />
       <EquipamentoSheet />
       <NovoUsuarioModal />
+      <EditarUsuarioModal />
     </div>
   );
 }

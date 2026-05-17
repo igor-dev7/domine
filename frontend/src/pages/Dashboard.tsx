@@ -216,7 +216,7 @@ function DashboardComum({ nome }: { nome: string }) {
             Acompanhe seus chamados e abra um novo quando precisar de suporte.
           </p>
         </div>
-        <Button className="rounded-2xl" onClick={abrirNovoChamado}>
+        <Button className="rounded-2xl" onClick={() => abrirNovoChamado()}>
           <Plus className="h-4 w-4" />
           Abrir novo chamado
         </Button>

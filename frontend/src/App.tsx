@@ -12,7 +12,6 @@ import { ChamadoDetalhe } from '@/pages/ChamadoDetalhe';
 import { EquipamentosLista } from '@/pages/EquipamentosLista';
 import { MeusEquipamentos } from '@/pages/MeusEquipamentos';
 import { UsuariosLista } from '@/pages/UsuariosLista';
-import { UsuarioForm } from '@/pages/UsuarioForm';
 import { EmConstrucao } from '@/pages/EmConstrucao';
 import { Relatorios } from '@/pages/Relatorios';
 import { Auditoria } from '@/pages/Auditoria';
@@ -38,7 +37,6 @@ export default function App() {
             <Route element={<AdminRoute />}>
               <Route path="/equipamentos" element={<EquipamentosLista />} />
               <Route path="/usuarios" element={<UsuariosLista />} />
-              <Route path="/usuarios/:id/editar" element={<UsuarioForm />} />
               <Route path="/relatorios" element={<Relatorios />} />
               <Route path="/auditoria" element={<Auditoria />} />
               <Route path="/base-conhecimento" element={<BaseConhecimento />} />
