@@ -9,16 +9,9 @@ RUN npm install --no-audit --no-fund
 # Copy source (substituído por volume em dev, mas serve de fallback se rodar sem override).
 COPY . .
 
-# Entrypoint que SEMPRE roda `npm install` antes do CMD — independe de qualquer
-# cache do Docker/Podman. Garante que `node_modules` está em sincronia com
-# `package.json` / `package-lock.json` (que vêm do bind mount em dev).
-COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-# Remove CRLF caso o checkout em Windows tenha convertido o script + dá +x.
-RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh \
- && chmod +x /usr/local/bin/docker-entrypoint.sh
-
 EXPOSE 5173
 
-# Invocamos via `sh` explicitamente — não depende do shebang nem do bit +x.
-ENTRYPOINT ["sh", "/usr/local/bin/docker-entrypoint.sh"]
+# Em dev o command é sobrescrito pelo docker-compose.override.yml com um
+# `sh -c "npm install … && npm run dev"` que sincroniza deps no startup.
+# Sem override (produção), apenas roda o Vite com o que já foi instalado.
 CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

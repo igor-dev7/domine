@@ -41,6 +41,12 @@ services:
       - ./frontend/components.json:/app/components.json
       - ./frontend/package.json:/app/package.json
       - ./frontend/package-lock.json:/app/package-lock.json
+    # Comando inline — sincroniza deps no startup sem precisar de script externo
+    # (evita problemas com CRLF em line endings no Windows).
+    command:
+      - sh
+      - -c
+      - "npm install --no-audit --no-fund --prefer-offline && npm run dev -- --host 0.0.0.0"
     environment:
       CHOKIDAR_USEPOLLING: "true"
       WATCHPACK_POLLING: "true"
