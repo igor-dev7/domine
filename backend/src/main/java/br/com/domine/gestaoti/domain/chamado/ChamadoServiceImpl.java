@@ -12,6 +12,7 @@ import br.com.domine.gestaoti.domain.chamado.dto.HistoricoResponse;
 import br.com.domine.gestaoti.domain.chamado.dto.StatusUpdateRequest;
 import br.com.domine.gestaoti.domain.equipamento.Equipamento;
 import br.com.domine.gestaoti.domain.equipamento.EquipamentoRepository;
+import br.com.domine.gestaoti.domain.equipamento.EquipamentoService;
 import br.com.domine.gestaoti.domain.notificacao.NotificacaoService;
 import br.com.domine.gestaoti.domain.usuario.Usuario;
 import br.com.domine.gestaoti.domain.usuario.UsuarioRepository;
@@ -19,6 +20,7 @@ import br.com.domine.gestaoti.enums.CategoriaChamado;
 import br.com.domine.gestaoti.enums.PerfilUsuario;
 import br.com.domine.gestaoti.enums.PrioridadeChamado;
 import br.com.domine.gestaoti.enums.StatusChamado;
+import br.com.domine.gestaoti.enums.StatusEquipamento;
 import br.com.domine.gestaoti.enums.TipoEventoHistorico;
 import br.com.domine.gestaoti.enums.TipoNotificacao;
 import br.com.domine.gestaoti.exception.BusinessException;
@@ -36,6 +38,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -44,9 +47,20 @@ public class ChamadoServiceImpl implements ChamadoService {
     private final ChamadoRepository chamadoRepository;
     private final UsuarioRepository usuarioRepository;
     private final EquipamentoRepository equipamentoRepository;
+    private final EquipamentoService equipamentoService;
     private final HistoricoChamadoRepository historicoRepository;
     private final ComentarioRepository comentarioRepository;
     private final NotificacaoService notificacaoService;
+
+    /**
+     * Categorias cujo chamado afeta o ciclo de manutenção do equipamento.
+     * Quando o chamado entra em EM_ATENDIMENTO, o equipamento vai para
+     * MANUTENCAO; quando o último chamado ativo dessas categorias deixa
+     * EM_ATENDIMENTO, o equipamento volta para EM_USO (com responsável)
+     * ou ESTOQUE (sem responsável).
+     */
+    private static final Set<CategoriaChamado> CATEGORIAS_QUE_AFETAM_EQUIPAMENTO =
+            Set.of(CategoriaChamado.HARDWARE, CategoriaChamado.IMPRESSAO);
 
     @Override
     @Transactional(readOnly = true)
@@ -139,18 +153,25 @@ public class ChamadoServiceImpl implements ChamadoService {
                 .orElseThrow(() -> ResourceNotFoundException.of("Chamado", id));
 
         StatusChamado anterior = c.getStatus();
-        if (request.status() == StatusChamado.RESOLVIDO) {
+        StatusChamado novo = request.status();
+        if (anterior == novo) {
+            return ChamadoResponse.from(c);
+        }
+
+        if (novo == StatusChamado.RESOLVIDO) {
             c.resolver();
         } else {
-            c.alterarStatusPara(request.status());
+            c.alterarStatusPara(novo);
         }
         chamadoRepository.save(c);
 
         registrarHistorico(c, me, TipoEventoHistorico.STATUS_ALTERADO,
-                "Status alterado de " + anterior + " para " + request.status());
+                "Status alterado de " + anterior + " para " + novo);
+
+        sincronizarStatusEquipamento(c, anterior, novo, me);
 
         // RESOLVIDO → avisa o solicitante (se não foi ele mesmo).
-        if (request.status() == StatusChamado.RESOLVIDO
+        if (novo == StatusChamado.RESOLVIDO
                 && c.getSolicitante() != null
                 && !c.getSolicitante().getId().equals(me.getId())) {
             notificacaoService.enviar(
@@ -163,6 +184,55 @@ public class ChamadoServiceImpl implements ChamadoService {
         }
 
         return ChamadoResponse.from(c);
+    }
+
+    /**
+     * Sincroniza o status do equipamento conforme a transição do chamado.
+     * <ul>
+     *   <li>Entrar em EM_ATENDIMENTO → equipamento vira MANUTENCAO (se não
+     *       estiver já em manutenção, preservando mudança manual prévia).</li>
+     *   <li>Sair de EM_ATENDIMENTO → equipamento volta para EM_USO/ESTOQUE
+     *       <strong>se</strong> ainda estiver em MANUTENCAO e <strong>se</strong>
+     *       não houver outro chamado ativo da mesma classe pro equipamento.</li>
+     * </ul>
+     * Aplicado só para categorias {@link #CATEGORIAS_QUE_AFETAM_EQUIPAMENTO}
+     * e quando o chamado tem equipamento atrelado.
+     */
+    private void sincronizarStatusEquipamento(Chamado c, StatusChamado anterior, StatusChamado novo, Usuario autor) {
+        Equipamento eq = c.getEquipamento();
+        if (eq == null) return;
+        if (!CATEGORIAS_QUE_AFETAM_EQUIPAMENTO.contains(c.getCategoria())) return;
+
+        boolean entrandoEmAtendimento = novo == StatusChamado.EM_ATENDIMENTO
+                && anterior != StatusChamado.EM_ATENDIMENTO;
+        boolean saindoDeAtendimento = anterior == StatusChamado.EM_ATENDIMENTO
+                && novo != StatusChamado.EM_ATENDIMENTO;
+
+        if (entrandoEmAtendimento) {
+            if (eq.getStatus() == StatusEquipamento.MANUTENCAO) return;
+            equipamentoService.alterarStatus(eq.getId(), StatusEquipamento.MANUTENCAO);
+            registrarHistorico(c, autor, TipoEventoHistorico.STATUS_ALTERADO,
+                    "Equipamento " + eq.getPatrimonio() + " marcado como MANUTENÇÃO automaticamente");
+            return;
+        }
+
+        if (saindoDeAtendimento) {
+            // Só restaura se ainda estiver em MANUTENCAO (não pisar em ajuste manual).
+            if (eq.getStatus() != StatusEquipamento.MANUTENCAO) return;
+            // Não restaura se outro chamado HARDWARE/IMPRESSAO ainda estiver em atendimento.
+            boolean outroAtivo = chamadoRepository.existeOutroNoStatusParaEquipamento(
+                    eq.getId(), StatusChamado.EM_ATENDIMENTO,
+                    CATEGORIAS_QUE_AFETAM_EQUIPAMENTO, c.getId());
+            if (outroAtivo) return;
+
+            StatusEquipamento destino = eq.getResponsavel() != null
+                    ? StatusEquipamento.EM_USO
+                    : StatusEquipamento.ESTOQUE;
+            equipamentoService.alterarStatus(eq.getId(), destino);
+            registrarHistorico(c, autor, TipoEventoHistorico.STATUS_ALTERADO,
+                    "Equipamento " + eq.getPatrimonio() + " restaurado para "
+                            + destino + " automaticamente");
+        }
     }
 
     @Override

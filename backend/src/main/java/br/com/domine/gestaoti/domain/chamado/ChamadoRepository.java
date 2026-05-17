@@ -51,4 +51,25 @@ public interface ChamadoRepository extends JpaRepository<Chamado, Long> {
 
     @Query("SELECT c.categoria, COUNT(c) FROM Chamado c GROUP BY c.categoria")
     List<Object[]> contarPorCategoria();
+
+    /**
+     * Checa se existe outro chamado (excluindo {@code excluirId}) no status
+     * informado, com categoria entre as fornecidas, apontando para o mesmo
+     * equipamento. Usado pela regra que mantém o equipamento em MANUTENÇÃO
+     * enquanto houver ao menos um chamado HARDWARE/IMPRESSAO em atendimento.
+     */
+    @Query("""
+            SELECT CASE WHEN COUNT(c) > 0 THEN TRUE ELSE FALSE END
+            FROM Chamado c
+            WHERE c.equipamento.id = :equipamentoId
+              AND c.status = :status
+              AND c.categoria IN :categorias
+              AND c.id <> :excluirId
+            """)
+    boolean existeOutroNoStatusParaEquipamento(
+            @Param("equipamentoId") Long equipamentoId,
+            @Param("status") StatusChamado status,
+            @Param("categorias") java.util.Collection<CategoriaChamado> categorias,
+            @Param("excluirId") Long excluirId
+    );
 }
